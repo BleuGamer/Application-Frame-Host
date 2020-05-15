@@ -1,1 +1,8 @@
+# Ignore build directory.
 /target
+
+# Cargo.lock should be ignored when creating a library.
+#Cargo.lock
+
+# Ignore files from `rustfmt`
+**/*.rs.bk
