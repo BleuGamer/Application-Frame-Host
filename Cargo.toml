@@ -1,0 +1,10 @@
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[package]
+name = "factorio-frame-host"
+version = "0.1.0"
+authors = ["barron"]
+edition = "2018"
+
+[dependencies]
+tokio = { version = "0.2", features = ["full"] }
