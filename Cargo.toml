@@ -7,4 +7,9 @@ authors = ["barron"]
 edition = "2018"
 
 [dependencies]
+# tokio = { version = "0.2", features = ["full"] }
+# async-std = "1.5"
+futures = "0.3"
 tokio = { version = "0.2", features = ["full"] }
+ctrlc = "3.1"
+crossbeam-channel = "0.4"
