@@ -30,7 +30,7 @@ pub mod server
         {
             let outputs = File::create("out.txt")?;
 
-            let mut fserver = Command::new(self.game_dir.as_path())
+            let fserver = Command::new(self.game_dir.as_path())
                 .arg("--start-server")
                 .arg(self.saves_dir.join(self.save.to_string()))
                 .stdout(Stdio::from(outputs))

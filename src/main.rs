@@ -45,8 +45,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>>
     fserver.show_details();
     let handle = fserver.start();
 
-    println!("Test Async.");
-
     loop 
     {
         select! 
