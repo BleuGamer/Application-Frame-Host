@@ -2,16 +2,16 @@
 #![allow(unused_imports)]
 #![allow(unused_variables)]
 
-extern crate ctrlc;
-
 use std::path::Path;
 use futures::future::lazy;
 use std::time::Duration;
-use std::process::{Command, Stdio};
+use std::process::Child;
 use std::io::{BufRead, BufReader};
 use std::thread;
 use std::error::Error;
 use crossbeam_channel::{bounded, tick, Receiver, select};
+
+mod ffh;
 
 fn ctrl_channel() -> Result<Receiver<()>, ctrlc::Error>
 {
@@ -23,35 +23,28 @@ fn ctrl_channel() -> Result<Receiver<()>, ctrlc::Error>
     Ok(receiver)
 }
 
-fn factorio_server() -> Result<(), Box<dyn std::error::Error>>
-{
-    let fppath = Path::new("/opt/factorio");
-    let fpath = fppath.join("bin").join("x64").join("factorio");
-    let savepath = fppath.join("saves").join("test.zip");
-
-    let mut fserver = Command::new(fpath).arg("--start-server").arg(savepath)
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .spawn()
-        .unwrap();
-
-    let fserver_stdout = fserver.stdout.as_mut().unwrap();
-    let child_stdin = fserver.stdin.unwrap();
-
-    
-
-    Ok(())
-}
-
 fn main() -> Result<(), Box<dyn std::error::Error>>
 {
     let ctrl_c_events = ctrl_channel()?;
     let ticks = tick(Duration::from_secs(1));
 
-    let mut running: bool = false;
-
-    factorio_server();
+    let fppath = Path::new("/opt/factorio");
+    let fpath = fppath.join("bin").join("x64").join("factorio");
+    let savepath = fppath.join("saves");
     
+    let fserver = ffh::server::FactorioServer 
+    {
+        parent_dir: fppath.to_path_buf(),
+        game_dir: fpath.to_path_buf(),
+        saves_dir: savepath.to_path_buf(),
+
+        save: "test.zip".to_string(),
+        
+        game_version: "0.18.24".to_string()
+    };
+    fserver.show_details();
+    let handle = fserver.start();
+
     println!("Test Async.");
 
     loop 
@@ -60,12 +53,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>>
         {
             recv(ticks) -> _ =>
             {
-                // println!("Working!");
+                println!("Working!");
             }
             recv(ctrl_c_events) -> _ =>
             {
                 println!("Stopping Factorio Server.");
-                running = false;
+                handle.unwrap().kill();
                 break;
             }
         }
