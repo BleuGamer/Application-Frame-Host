@@ -3,8 +3,9 @@ pub mod server
 {
     use std::path::{Path, PathBuf};
     use std::fs::File;
-    use std::io::Error;
+    use std::io;
     use std::process::{Command, Stdio, Child};
+    use std::env;
 
     // These members should probably be encapsulated eventually.
     pub struct FactorioServer 
@@ -26,9 +27,20 @@ pub mod server
             // println!("Factorio DIR: {}", self.game_dir)
         }
 
-        pub fn start(self: &Self) -> Result<Child, Error>
+        fn get_main() -> io::Result<PathBuf>
         {
-            let outputs = File::create("out.txt")?;
+            let mut exe = env::current_exe()?;
+            exe.set_file_name("out.txt");
+
+            Ok(exe)
+        }
+
+        pub fn start(self: &Self) -> Result<Child, io::Error>
+        {
+
+            let exe = Self::get_main().unwrap();
+
+            let outputs = File::create(exe)?;
 
             let fserver = Command::new(self.game_dir.as_path())
                 .arg("--start-server")
@@ -36,10 +48,6 @@ pub mod server
                 .stdout(Stdio::from(outputs))
                 .spawn()
                 .unwrap();
-
-                // let fserver_stdout = fserver.stdout.as_mut().unwrap();
-
-                
 
                 Ok(fserver)
         }

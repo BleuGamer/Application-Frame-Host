@@ -56,7 +56,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>>
             recv(ctrl_c_events) -> _ =>
             {
                 println!("Stopping Factorio Server.");
-                handle.unwrap().kill();
+                handle.unwrap().kill().expect("Factorio isn't running.");
                 break;
             }
         }
