@@ -1,0 +1,11 @@
+{
+    "root_url": "/opt",
+    "parent_dir": "factorio",
+    "saves_dir": "saves",
+    "default_save": "test.zip",
+
+    "versions":
+        [
+            "0.18.24"
+        ]
+}
