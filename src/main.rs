@@ -11,6 +11,8 @@ use std::thread;
 use std::error::Error;
 use crossbeam_channel::{bounded, tick, Receiver, select};
 
+mod ffh;
+
 fn ctrl_channel() -> Result<Receiver<()>, ctrlc::Error>
 {
     let (sender, receiver) = bounded(100);
@@ -30,7 +32,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>>
     let fpath = fppath.join("bin").join("x64").join("factorio");
     let savepath = fppath.join("saves");
     
-    let fserver = ffh::framehost::server::FactorioServer 
+    let fserver = ffh::framehost::server::FactorioServer
     {
         parent_dir: fppath.to_path_buf(),
         game_dir: fpath.to_path_buf(),
