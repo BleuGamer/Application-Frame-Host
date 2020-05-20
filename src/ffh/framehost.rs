@@ -16,7 +16,7 @@ pub mod server
     {
         root_url: String,
         parent_dir: String,
-        game_dir: String,
+
         saves_dir: String,
 
         default_save: String,
@@ -28,7 +28,7 @@ pub mod server
     {
         pub fn show_details(self: &Self) 
         {
-            println!("Root DIR: {}", self.root_url);
+            // println!("Root DIR: {}", self.root_url);
             // println!("Factorio DIR: {}", self.game_dir)
         }
 
@@ -36,60 +36,68 @@ pub mod server
         {
             let mut exe = env::current_exe()?;
             exe.set_file_name("out.txt");
-            println!("get_main: {}", exe.display());
 
             Ok(exe)
         }
 
-/*         pub fn start(self: &Self) -> Result<Child, io::Error>
+
+        pub fn start(self: &Self) -> Result<Child, io::Error>
         {
 
             let exe = Self::get_main().unwrap();
-
             let outputs = File::create(exe)?;
         
+            let factorio: PathBuf = PathBuf::from(self.root_url.as_str())
+                .join(self.parent_dir.as_str())
+                .join(self.game_version.as_str())
+                .join("bin")
+                .join("x64")
+                .join("factorio");
 
-            let fserver = Command::new()
+            let factorio_save: PathBuf = PathBuf::from(self.root_url.as_str())
+                .join(self.parent_dir.as_str())
+                .join(self.game_version.as_str())
+                .join(self.saves_dir.as_str())
+                .join(self.default_save.as_str());
+
+            println!("DIR: {}", factorio.display());
+            
+            let fserver = Command::new(factorio)
                 .arg("--start-server")
-                .arg(self.saves_dir.join(self.default_save.to_string()))
+                .arg(factorio_save)
                 .stdout(Stdio::from(outputs))
                 .spawn()
                 .unwrap();
 
                 Ok(fserver)
-        } */
+        } 
+
 
         pub fn new() -> serde_json::Result<FactorioServer>
         {
             let raw: &str = &Self::read_file()[..];
             let config: serde_json::Value = serde_json::from_str(raw)?;
 
-            
-
-            let fserver = FactorioServer
+            let factorio_server = FactorioServer
             {
                 root_url: config["root_url"].as_str().unwrap().to_string(),
-                parent_dir: "".to_string(),
-                game_dir: "".to_string(),
-                saves_dir: "".to_string(),
+                parent_dir: config["parent_dir"].as_str().unwrap().to_string(), // Eventually dynamic.
+                saves_dir: config["saves_dir"].as_str().unwrap().to_string(),
         
-                default_save: "".to_string(),
-        
-                game_version: "".to_string(),
+                default_save: config["default_save"].as_str().unwrap().to_string(),
+
+                // Should be iterated against.
+                game_version: config["versions"][0].as_str().unwrap().to_string(),
+     
             };
 
-            Ok(fserver)
+            Ok(factorio_server)
         }
 
-
-
-        
         fn read_file() -> String
         {
             let mut pwd = Self::get_main().unwrap();
-            println!("read_file [pwd]: {}", pwd.display());
             pwd.set_file_name("config.json");
-            println!("read_file [file_name]: {}", pwd.display());
             let file = File::open(pwd.as_path()).expect("Could not open file.");
             let mut buffered_reader = BufReader::new(file);
             let mut contents = String::new();

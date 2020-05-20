@@ -33,20 +33,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>>
     let fpath = fppath.join("bin").join("x64").join("factorio");
     let savepath = fppath.join("saves");
     
-    /*
-    let fserver = ffh::framehost::server::FactorioServer
-    {
-        parent_dir: fppath.to_path_buf(),
-        game_dir: fpath.to_path_buf(),
-        saves_dir: savepath.to_path_buf(),
-
-        default_save: "test.zip".to_string(),
-        
-        game_version: "0.18.24".to_string()
-    };
-    */
-    let fserver = server::FactorioServer::new();
-    fserver.unwrap().show_details();
+    let fserver = server::FactorioServer::new().unwrap();
+    fserver.show_details();
+    fserver.start();
     // let handle = fserver.start();
 
     let tpath = std::env::current_dir()?;
