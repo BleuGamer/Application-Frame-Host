@@ -1,4 +1,3 @@
-
 pub mod server 
 {
     use std::path::{Path, PathBuf};
@@ -22,6 +21,8 @@ pub mod server
         default_save: String,
 
         game_version: String,
+
+        
     }
 
     impl FactorioServer 

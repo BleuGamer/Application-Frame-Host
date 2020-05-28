@@ -2,6 +2,8 @@
 #![allow(unused_imports)]
 #![allow(unused_variables)]
 
+use frame_host;
+
 use std::path::Path;
 use futures::future::lazy;
 use std::time::Duration;
@@ -10,9 +12,6 @@ use std::io::{BufRead, BufReader};
 use std::thread;
 use std::error::Error;
 use crossbeam_channel::{bounded, tick, Receiver, select};
-
-mod ffh;
-use ffh::framehost::server;
 
 fn ctrl_channel() -> Result<Receiver<()>, ctrlc::Error>
 {
@@ -33,7 +32,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>>
     let fpath = fppath.join("bin").join("x64").join("factorio");
     let savepath = fppath.join("saves");
     
-    let fserver = server::FactorioServer::new().unwrap();
+    let fserver = frame_host::server::FactorioServer::new().unwrap();
     fserver.show_details();
     fserver.start();
     // let handle = fserver.start();
