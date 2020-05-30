@@ -11,22 +11,64 @@ pub mod server
     use std::env;
     use serde_json;
 
-    pub struct FactorioServer 
+    pub struct Server 
     {
+        /*
         root_url: String,
         parent_dir: String,
-
         saves_dir: String,
-
         default_save: String,
-
         game_version: String,
+        */
+        root: PathBuf,
+        parent: String,
 
+        args: Vec<String>,
+        cwd: Option<String>,
         
     }
 
-    impl FactorioServer 
+    impl Server 
     {
+        /// Creates a new 'Server' with a root directory and application subdirectories.
+        /// 
+        /// TODO: Full implimentation examples.
+        pub fn new(root: String, parent: String) -> Server
+        {
+            // let raw: &str = &Self::read_file()[..];
+            // let config: serde_json::Value = serde_json::from_str(raw)?;
+
+            let server = Server
+            {
+                // TODO: Trait this for abstraction.
+                root: PathBuf::from(root),
+                parent: parent,
+
+                args: Vec::new(),
+                cwd: None,
+            };
+
+            server
+        }
+
+        pub fn arg<'a>(&'a mut self, arg: String) -> &'a mut Server
+        {
+            self.args.push(arg);
+            self
+        }
+
+        pub fn args<'a>(&'a mut self, args: &[String]) -> &'a mut Server
+        {
+            self.args.extend_from_slice(args);
+            self
+        }
+
+        pub fn cwd<'a>(&'a mut self, dir: String) -> &'a mut Server
+        {
+            self.cwd = Some(dir);
+            self
+        }
+
         pub fn show_details(self: &Self) 
         {
             // println!("Root DIR: {}", self.root_url);
@@ -42,12 +84,12 @@ pub mod server
         }
 
 
-        pub fn start(self: &Self) -> Result<Child, io::Error>
+        pub fn start(self: &Self)
         {
 
-            let exe = Self::get_main().unwrap();
-            let outputs = File::create(exe)?;
-        
+            //let exe = Self::get_main().unwrap();
+            //let outputs = File::create(exe)?;
+        /*
             let factorio: PathBuf = PathBuf::from(self.root_url.as_str())
                 .join(self.parent_dir.as_str())
                 .join(self.game_version.as_str())
@@ -73,28 +115,6 @@ pub mod server
                 Ok(fserver)
         } 
 
-
-        pub fn new() -> serde_json::Result<FactorioServer>
-        {
-            let raw: &str = &Self::read_file()[..];
-            let config: serde_json::Value = serde_json::from_str(raw)?;
-
-            let factorio_server = FactorioServer
-            {
-                root_url: config["root_url"].as_str().unwrap().to_string(),
-                parent_dir: config["parent_dir"].as_str().unwrap().to_string(), // Eventually dynamic.
-                saves_dir: config["saves_dir"].as_str().unwrap().to_string(),
-        
-                default_save: config["default_save"].as_str().unwrap().to_string(),
-
-                // Should be iterated against.
-                game_version: config["versions"][0].as_str().unwrap().to_string(),
-     
-            };
-
-            Ok(factorio_server)
-        }
-
         fn read_file() -> String
         {
             let mut pwd = Self::get_main().unwrap();
@@ -107,8 +127,9 @@ pub mod server
                 Ok(_number_of_bytes) => _number_of_bytes,
                 Err(_err) => 0
             };
+            */
 
-            contents
+            
         }
         
     }
