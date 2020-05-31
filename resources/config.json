@@ -1,11 +1,7 @@
 {
-    "root_url": "/opt",
-    "parent_dir": "factorio",
+    "root_url": "/opt/factorio",
+    "parent_dir": "0.18.24",
+    "executable": "bin/x64/factorio",
     "saves_dir": "saves",
-    "default_save": "test.zip",
-
-    "versions":
-        [
-            "0.18.24"
-        ]
+    "default_save": "test.zip"
 }
