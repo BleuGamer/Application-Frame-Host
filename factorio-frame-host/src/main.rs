@@ -24,12 +24,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>>
     let ctrl_c_events = ctrl_channel()?;
     let ticks = tick(Duration::from_secs(1));
 
-    let fppath = Path::new("/opt/factorio");
-    let fpath = fppath.join("bin").join("x64").join("factorio");
-    let savepath = fppath.join("saves");
+    let fppath = Path::new("/opt/factorio/");
+    let fpparent: PathBuf = PathBuf::from("0.18.24");
+    let fpath: PathBuf = PathBuf::from("bin").join("x64").join("factorio");
     
-
-    // let handle = fserver.start();
+    let mut fserver = frame_host::server::Server::new(fppath);
+    fserver.parent(fpparent);
+    fserver.child(fpath);
+    fserver.output(get_main().unwrap());
+    fserver.show_details();
+    fserver.arg("--start-server");
+    fserver.arg("/opt/factorio/0.18.24/saves/test.zip");
+    fserver.start();
 
     let tpath = std::env::current_dir()?;
     println!("PWD is {}", tpath.display());
@@ -45,7 +51,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>>
             recv(ctrl_c_events) -> _ =>
             {
                 println!("Stopping Factorio Server.");
-                //handle.unwrap().kill().expect("Factorio isn't running.");
+                fserver.stop();
                 break;
             }
         }

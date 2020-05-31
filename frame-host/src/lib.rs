@@ -1,14 +1,16 @@
 pub mod server 
 {
-    use std::path::{Path, PathBuf};
+    use std::path::PathBuf;
     use std::process::{Command, Stdio, Child};
     use std::io::Write;
+    use std::fs::File;
 
     pub struct Server 
     {
         root: PathBuf,
         parent: Option<PathBuf>,
         child: Option<PathBuf>,
+
         output: Option<PathBuf>,
 
         args: Vec<String>,
@@ -34,6 +36,7 @@ pub mod server
                 root: root.into(),
                 parent: None,
                 child: None,
+
                 output: None,
 
                 args: Vec::new(),
@@ -46,32 +49,55 @@ pub mod server
             server
         }
 
-        pub fn arg<'a>(&'a mut self, arg: String) -> &'a mut Server
+        pub fn show_details(&mut self) -> &mut Self
         {
-            self.args.push(arg);
+            println!("Root: {}", self.root.display());
+            println!("Parent: {}", self.parent.as_mut().unwrap().display());
+            println!("child: {}", self.child.as_mut().unwrap().display());
+
             self
         }
 
-        pub fn args<'a>(&'a mut self, args: &[String]) -> &'a mut Server
+        pub fn arg(&mut self, arg: impl Into<String>) -> &mut Self
+        {
+            self.args.push(arg.into());
+            self
+        }
+
+        pub fn args(&mut self, args: &[String]) -> &mut Self
         {
             self.args.extend_from_slice(args);
             self
         }
 
-        pub fn child<'a>(&'a mut self, child: impl Into<PathBuf>) -> &'a mut Server
+        pub fn parent(&mut self, parent: impl Into<PathBuf>) -> &mut Self
+        {
+            self.parent = Some(parent.into());
+            self
+        }
+
+        pub fn child(&mut self, child: impl Into<PathBuf>) -> &mut Self
         {
             self.child = Some(child.into());
             self
         }
 
-        pub fn cwd<'a>(&'a mut self, dir: String) -> &'a mut Server
+        pub fn output(&mut self, output: impl Into<PathBuf>) -> &mut Self
+        {
+            self.output = Some(output.into());
+            self
+        }
+
+        pub fn cwd(&mut self, dir: String) -> &mut Self
         {
             self.cwd = Some(dir);
             self
         }
 
-        pub fn start<'a>(&'a mut self) -> &'a mut Server
+        pub fn start(&mut self) -> &mut Self
         {
+            let outputs = File::create(self.output.as_mut().unwrap());
+
             let child: PathBuf = self.root
                 .join(self.parent.as_ref().unwrap())
                 .join(self.child.as_ref().unwrap());
@@ -79,16 +105,21 @@ pub mod server
             self.handle = Some(Command::new(child)
                 .args(&self.args)
                 .stdin(Stdio::piped())
-                .stdout(Stdio::piped())
+                .stdout(Stdio::from(outputs.unwrap()))
                 .spawn()
                 .unwrap());
 
             self
         }
 
-        pub fn stop<'a>(&'a mut self) -> &'a mut Server
+        pub fn stop(&mut self) -> &mut Self
         {
             // TODO: Access handle.
+            match self.handle.as_mut().unwrap().stdin.as_mut().unwrap().write_all("/quit".as_bytes())
+            {
+                Ok(_n) => {}
+                Err(_error) => println!("Server is not running.")
+            }
 
             self
         }
