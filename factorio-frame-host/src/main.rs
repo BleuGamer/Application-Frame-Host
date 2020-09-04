@@ -14,10 +14,11 @@ use std::error::Error;
 use std::fs::File;
 use std::borrow::Cow;
 use std::io;
-use std::io::prelude::*;
 use std::env;
 
 use crossbeam_channel::{bounded, tick, Receiver, select};
+
+mod parser;
 
 fn main() -> Result<(), Box<dyn std::error::Error>>
 {
@@ -25,17 +26,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>>
     let ticks = tick(Duration::from_secs(1));
 
     let fppath = Path::new("/opt/factorio/");
-    let fpparent: PathBuf = PathBuf::from("0.18.24");
+    let fpparent: PathBuf = PathBuf::from("1.0");
     let fpath: PathBuf = PathBuf::from("bin").join("x64").join("factorio");
     
     let mut fserver = frame_host::server::Server::new(fppath);
     fserver.parent(fpparent);
     fserver.child(fpath);
-    fserver.output(get_main().unwrap());
+    fserver.output(parser::get_main().unwrap());
     fserver.show_details();
     fserver.arg("--start-server");
     fserver.arg("/opt/factorio/0.18.24/saves/test.zip");
-    fserver.start();
+    // fserver.start();
+
+    let tester: String = parser::read_contents().unwrap();
+    println!("{}", tester);
 
     let tpath = std::env::current_dir()?;
     println!("PWD is {}", tpath.display());
@@ -60,13 +64,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>>
     Ok(())
 }
 
-fn get_main() -> io::Result<PathBuf>
-{
-    let mut exe = env::current_exe()?;
-    exe.set_file_name("out.txt");
-    Ok(exe)
-}
-
 
 fn ctrl_channel() -> Result<Receiver<()>, ctrlc::Error>
 {
@@ -76,19 +73,4 @@ fn ctrl_channel() -> Result<Receiver<()>, ctrlc::Error>
     })?;
 
     Ok(receiver)
-}
-
-fn read_file() -> String
-{
-    let mut pwd = get_main().unwrap();
-    pwd.set_file_name("config.json");
-    let file = File::open(pwd.as_path()).expect("Could not open file.");
-    let mut buffered_reader = BufReader::new(file);
-    let mut contents = String::new();
-    let _number_of_bytes: usize = match buffered_reader.read_to_string(&mut contents)
-    {
-        Ok(_number_of_bytes) => _number_of_bytes,
-        Err(_err) => 0
-    };
-    contents
 }
