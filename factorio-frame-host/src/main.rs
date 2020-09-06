@@ -25,9 +25,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>>
     let ctrl_c_events = ctrl_channel()?;
     let ticks = tick(Duration::from_secs(1));
 
-    let fppath = Path::new("/opt/factorio/");
-    let fpparent: PathBuf = PathBuf::from("1.0");
-    let fpath: PathBuf = PathBuf::from("bin").join("x64").join("factorio");
+    let server_details = &mut parser::ServerDetails::default();
+    parser::read_contents(server_details).unwrap();
+
+    let fppath = Path::new(server_details.root_url.as_ref().unwrap());
+    let fpparent: PathBuf = PathBuf::from(server_details.parent_dir.as_ref().unwrap());
+    let fpath: PathBuf = PathBuf::from(server_details.executable.as_ref().unwrap());
+    //.join("x64").join("factorio");
     
     let mut fserver = frame_host::server::Server::new(fppath);
     fserver.parent(fpparent);
@@ -35,11 +39,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>>
     fserver.output(parser::get_main().unwrap());
     fserver.show_details();
     fserver.arg("--start-server");
-    fserver.arg("/opt/factorio/0.18.24/saves/test.zip");
-    // fserver.start();
+    //fserver.arg("/opt/factorio/1.0/saves/test.zip");
+    //fserver.start();
 
-    let tester: String = parser::read_contents().unwrap();
-    println!("{}", tester);
+    
+    // println!("yoooooo: {}", server_details.default_save.as_ref().unwrap());
+
 
     let tpath = std::env::current_dir()?;
     println!("PWD is {}", tpath.display());

@@ -1,5 +1,5 @@
 use serde_json::{Result, Value};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 use std::io::{BufRead, BufReader};
 use std::io::prelude::*;
@@ -7,12 +7,31 @@ use std::io;
 use std::env;
 use std::fs::File;
 
-pub fn read_contents() -> Result<String>
+// This will eventually be agnostic.
+// Currently factorio specific.
+#[derive(Default)]
+pub struct ServerDetails
+{
+    pub root_url: Option<String>,
+    pub parent_dir: Option<String>,
+    pub executable: Option<String>,
+    pub saves_dir: Option<String>,
+    pub default_save: Option<String>
+}
+
+pub fn read_contents(_sd: &mut ServerDetails) -> Result<()>
 {
     let v: Value = serde_json::from_str(read_file().as_str())?;
+    
+    _sd.root_url = Some(v["root_url"].to_string());
+    _sd.parent_dir = Some(v["parent_dir"].to_string());
+    _sd.executable = Some(v["executable"].to_string());
+    _sd.saves_dir = Some(v["saves_dir"].to_string());
+    _sd.default_save = Some(v["default_save"].to_string());
 
-    Ok(v["pig"].to_string())
+    Ok(())
 }
+
 
 fn read_file() -> String
 {

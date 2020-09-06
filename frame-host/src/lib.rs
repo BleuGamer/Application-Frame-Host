@@ -45,7 +45,7 @@ pub mod server
                 handle: None,
             };
 
-            assert!(server.root.is_absolute());
+            //assert!(server.root.is_absolute());
             server
         }
 
