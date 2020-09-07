@@ -4,24 +4,23 @@
 
 use frame_host;
 
-use std::path::{Path, PathBuf};
 use futures::future::lazy;
-use std::time::Duration;
-use std::process::Child;
-use std::io::{BufRead, BufReader};
-use std::thread;
+use std::borrow::Cow;
+use std::env;
 use std::error::Error;
 use std::fs::File;
-use std::borrow::Cow;
 use std::io;
-use std::env;
+use std::io::{BufRead, BufReader};
+use std::path::{Path, PathBuf};
+use std::process::Child;
+use std::thread;
+use std::time::Duration;
 
-use crossbeam_channel::{bounded, tick, Receiver, select};
+use crossbeam_channel::{bounded, select, tick, Receiver};
 
 mod parser;
 
-fn main() -> Result<(), Box<dyn std::error::Error>>
-{
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ctrl_c_events = ctrl_channel()?;
     let ticks = tick(Duration::from_secs(1));
 
@@ -32,7 +31,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>>
     let fpparent: PathBuf = PathBuf::from(server_details.parent_dir.as_ref().unwrap());
     let fpath: PathBuf = PathBuf::from(server_details.executable.as_ref().unwrap());
     //.join("x64").join("factorio");
-    
+
     let mut fserver = frame_host::server::Server::new(fppath);
     fserver.parent(fpparent);
     fserver.child(fpath);
@@ -42,17 +41,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>>
     //fserver.arg("/opt/factorio/1.0/saves/test.zip");
     //fserver.start();
 
-    
     // println!("yoooooo: {}", server_details.default_save.as_ref().unwrap());
-
 
     let tpath = std::env::current_dir()?;
     println!("PWD is {}", tpath.display());
 
-    loop 
-    {
-        select! 
-        {
+    loop {
+        select! {
             recv(ticks) -> _ =>
             {
                 println!("Working!");
@@ -69,12 +64,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>>
     Ok(())
 }
 
-
-fn ctrl_channel() -> Result<Receiver<()>, ctrlc::Error>
-{
+fn ctrl_channel() -> Result<Receiver<()>, ctrlc::Error> {
     let (sender, receiver) = bounded(100);
     ctrlc::set_handler(move || {
-        let _ =sender.send(());
+        let _ = sender.send(());
     })?;
 
     Ok(receiver)
