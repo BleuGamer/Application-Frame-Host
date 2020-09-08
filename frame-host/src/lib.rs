@@ -39,7 +39,8 @@ pub mod server {
                 handle: None,
             };
 
-            //assert!(server.root.is_absolute());
+            println!("Testing server_root: {}", server.root.display());
+            assert!(server.root.is_absolute());
             server
         }
 

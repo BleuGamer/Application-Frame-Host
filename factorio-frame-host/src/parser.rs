@@ -21,11 +21,11 @@ pub struct ServerDetails {
 pub fn read_contents(_sd: &mut ServerDetails) -> Result<()> {
     let v: Value = serde_json::from_str(read_file().as_str())?;
 
-    _sd.root_url = Some(v["root_url"].to_string());
-    _sd.parent_dir = Some(v["parent_dir"].to_string());
-    _sd.executable = Some(v["executable"].to_string());
-    _sd.saves_dir = Some(v["saves_dir"].to_string());
-    _sd.default_save = Some(v["default_save"].to_string());
+    _sd.root_url = Some(v["root_url"].as_str().unwrap().to_string());
+    _sd.parent_dir = Some(v["parent_dir"].as_str().unwrap().to_string());
+    _sd.executable = Some(v["executable"].as_str().unwrap().to_string());
+    _sd.saves_dir = Some(v["saves_dir"].as_str().unwrap().to_string());
+    _sd.default_save = Some(v["default_save"].as_str().unwrap().to_string());
 
     Ok(())
 }
