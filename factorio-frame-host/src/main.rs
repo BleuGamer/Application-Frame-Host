@@ -39,7 +39,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     fserver.show_details();
     fserver.arg("--start-server");
     //fserver.arg("/opt/factorio/1.0/saves/test.zip");
-    //fserver.start();
+    fserver.start();
 
     // println!("yoooooo: {}", server_details.default_save.as_ref().unwrap());
 

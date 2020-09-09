@@ -3,11 +3,12 @@
 [package]
 name = "factorio-frame-host"
 version = "0.1.0"
-authors = ["barron"]
+authors = ["Lance Wallis <bleudeveloper@gmail.com>"]
 edition = "2018"
 
 [dependencies]
 frame-host = { path = "../frame-host" }
+asio-logger = { path = "../asio-logger" }
 
 futures = "0.3"
 ctrlc = "3.1"

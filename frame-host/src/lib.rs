@@ -48,6 +48,7 @@ pub mod server {
             println!("Root: {}", self.root.display());
             println!("Parent: {}", self.parent.as_mut().unwrap().display());
             println!("child: {}", self.child.as_mut().unwrap().display());
+            println!("Output File: {}", self.output.as_mut().unwrap().display());
 
             self
         }

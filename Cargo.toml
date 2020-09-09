@@ -3,4 +3,5 @@
 members = [
     "factorio-frame-host",
     "frame-host",
+    "asio-logger",
 ]
