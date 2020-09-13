@@ -3,6 +3,7 @@
 #![allow(unused_variables)]
 
 use asio_logger;
+use asio_logger::log;
 use frame_host;
 
 use futures::future::lazy;
@@ -49,17 +50,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // println!("yoooooo: {}", server_details.default_save.as_ref().unwrap());
 
     let tpath = std::env::current_dir()?;
-    println!("PWD is {}", tpath.display());
+    log!(&logger, "PWD: {}", tpath.display());
+    
 
     loop {
         select! {
             recv(ticks) -> _ =>
             {
-                println!("Working!");
+                logger.log("Working!");
             }
             recv(ctrl_c_events) -> _ =>
             {
-                println!("Stopping Factorio Server.");
+                logger.log("Stopping Factorio Server.");
                 fserver.stop();
                 break;
             }

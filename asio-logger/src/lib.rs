@@ -55,3 +55,10 @@ impl Logger {
         self
     }
 }
+
+#[macro_export]
+macro_rules! log {
+    ($logger:expr, $fmt:expr, $($arg:tt)*) => {
+        $crate::Logger::log($logger, &format_args!($fmt, $($arg)*).to_string())
+    }
+}
