@@ -1,29 +1,57 @@
-pub mod logger {
-    use async_logger::AsyncLoggerNB;
-    use async_logger::FileWriter;
-    use std::{sync::Arc, thread};
+// For development.
+#![allow(unused_imports)]
+#![allow(unused_variables)]
 
-    use std::path::PathBuf;
+use std::fs::OpenOptions;
+use slog::{Drain, o, info};
+use std::collections::BTreeMap;
+use std::path::PathBuf;
 
-    struct Sink {
+pub struct Logger {
+    output: slog::Logger,
+    files: BTreeMap<&'static str, slog::Logger>,
+}
 
+impl Logger {
+    pub fn new(dir: impl Into<PathBuf>) -> Logger {
+
+        let decorator = slog_term::TermDecorator::new().build();
+        let drain = slog_term::FullFormat::new(decorator).build().fuse();
+        let drain = slog_async::Async::new(drain).build().fuse();
+        let _out = slog::Logger::root(drain, o!());
+
+        let mut logger = Logger {
+            output: _out,
+            files: BTreeMap::new(),
+        };
+
+        let log = Logger::create_file_logger("All", dir.into());
+
+        logger.files.insert("All", log);
+
+        logger
     }
 
-    pub struct File {
-        file: PathBuf,
+    fn create_file_logger(name: impl Into<String>, dir: PathBuf) -> slog::Logger {
+        let file = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(dir.join(name.into()))
+            .unwrap();
+        
+        let decorator = slog_term::PlainDecorator::new(file);
+        let drain = slog_term::FullFormat::new(decorator).build().fuse();
+        let drain = slog_async::Async::new(drain).build().fuse();
+        let logger = slog::Logger::root(drain, o!());
 
-        //_sink: Sink
+        logger
     }
 
-    impl File {
-        pub fn new(_file: impl Into<PathBuf>) -> File {
+    pub fn log(&self, msg: &str) -> &Self{
+        info!(self.output, "{}", msg);
+        info!(self.files["All"], "{}", msg);
 
-            let file = File {
-                file: _file.into(),
-
-            };
-            
-            file
-        }
+        self
     }
 }

@@ -39,7 +39,6 @@ pub mod server {
                 handle: None,
             };
 
-            println!("Testing server_root: {}", server.root.display());
             assert!(server.root.is_absolute());
             server
         }
@@ -95,7 +94,7 @@ pub mod server {
                 Command::new(child)
                     .args(&self.args)
                     .stdin(Stdio::piped())
-                    .stdout(Stdio::from(outputs.unwrap()))
+                    //.stdout(Stdio::from(outputs.unwrap()))
                     .spawn()
                     .unwrap(),
             );

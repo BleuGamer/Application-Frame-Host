@@ -32,7 +32,7 @@ pub fn read_contents(_sd: &mut ServerDetails) -> Result<()> {
 
 fn read_file() -> String {
     let mut pwd = get_main().unwrap();
-    pwd.set_file_name("factorio.json");
+    pwd.push("factorio.json");
     let file = File::open(pwd.as_path()).expect("Could not open file.");
     let mut buffered_reader = BufReader::new(file);
     let mut contents = String::new();
@@ -45,6 +45,6 @@ fn read_file() -> String {
 
 pub fn get_main() -> io::Result<PathBuf> {
     let mut exe = env::current_exe()?;
-    exe.set_file_name("out.txt");
+    exe.pop();
     Ok(exe)
 }

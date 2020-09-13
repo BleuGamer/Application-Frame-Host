@@ -2,6 +2,7 @@
 #![allow(unused_imports)]
 #![allow(unused_variables)]
 
+use asio_logger;
 use frame_host;
 
 use futures::future::lazy;
@@ -23,6 +24,10 @@ mod parser;
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ctrl_c_events = ctrl_channel()?;
     let ticks = tick(Duration::from_secs(1));
+
+    println!("LOGGER DIR: {}", parser::get_main().unwrap().display());
+    let logger = asio_logger::Logger::new(parser::get_main().unwrap());
+    logger.log("Test Log.");
 
     let server_details = &mut parser::ServerDetails::default();
     parser::read_contents(server_details).unwrap();
