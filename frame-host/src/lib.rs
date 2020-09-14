@@ -5,16 +5,16 @@ pub mod server {
     use std::process::{Child, Command, Stdio};
 
     pub struct Server {
-        root: PathBuf,
-        parent: Option<PathBuf>,
-        child: Option<PathBuf>,
+        pub root: PathBuf,
+        pub parent: Option<PathBuf>,
+        pub child: Option<PathBuf>,
 
-        output: Option<PathBuf>,
+        pub output: Option<PathBuf>,
 
-        args: Vec<String>,
-        cwd: Option<String>,
+        pub args: Vec<String>,
+        pub cwd: Option<String>,
 
-        handle: Option<Child>,
+        pub handle: Option<Child>,
     }
 
     impl Server {
@@ -41,15 +41,6 @@ pub mod server {
 
             assert!(server.root.is_absolute());
             server
-        }
-
-        pub fn show_details(&mut self) -> &mut Self {
-            println!("Root: {}", self.root.display());
-            println!("Parent: {}", self.parent.as_mut().unwrap().display());
-            println!("child: {}", self.child.as_mut().unwrap().display());
-            println!("Output File: {}", self.output.as_mut().unwrap().display());
-
-            self
         }
 
         pub fn arg(&mut self, arg: impl Into<String>) -> &mut Self {
@@ -94,7 +85,7 @@ pub mod server {
                 Command::new(child)
                     .args(&self.args)
                     .stdin(Stdio::piped())
-                    //.stdout(Stdio::from(outputs.unwrap()))
+                    .stdout(Stdio::from(outputs.unwrap()))
                     .spawn()
                     .unwrap(),
             );

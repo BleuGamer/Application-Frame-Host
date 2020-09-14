@@ -160,6 +160,7 @@ dependencies = [
 name = "frame-host"
 version = "0.1.0"
 dependencies = [
+ "asio-logger",
  "serde",
  "serde_json",
 ]

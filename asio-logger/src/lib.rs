@@ -3,7 +3,7 @@
 #![allow(unused_variables)]
 
 use std::fs::OpenOptions;
-use slog::{Drain, o, info};
+use slog::{Drain, o, info, warn, error};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
@@ -25,7 +25,7 @@ impl Logger {
             files: BTreeMap::new(),
         };
 
-        let log = Logger::create_file_logger("All", dir.into());
+        let log = Logger::create_file_logger("All.txt", dir.into());
 
         logger.files.insert("All", log);
 

@@ -28,7 +28,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("LOGGER DIR: {}", parser::get_main().unwrap().display());
     let logger = asio_logger::Logger::new(parser::get_main().unwrap());
-    logger.log("Test Log.");
+    logger.log("STARTING SERVER");
 
     let server_details = &mut parser::ServerDetails::default();
     parser::read_contents(server_details).unwrap();
@@ -41,8 +41,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut fserver = frame_host::server::Server::new(fppath);
     fserver.parent(fpparent);
     fserver.child(fpath);
-    fserver.output(parser::get_main().unwrap());
-    fserver.show_details();
+    let mut output = parser::get_main().unwrap();
+    output.push("out.txt");
+    fserver.output(output);
+
+    log!(&logger, "Root: {}", fserver.root.display());
+    log!(&logger, "Parent: {}", fserver.parent.as_mut().unwrap().display());
+    log!(&logger, "child: {}", fserver.child.as_mut().unwrap().display());
+    log!(&logger, "Output File: {}", fserver.output.as_mut().unwrap().display());
+
     fserver.arg("--start-server");
     //fserver.arg("/opt/factorio/1.0/saves/test.zip");
     fserver.start();
