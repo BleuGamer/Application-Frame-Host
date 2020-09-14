@@ -4,6 +4,7 @@
 
 use asio_logger;
 use asio_logger::log;
+use util;
 use frame_host;
 
 use futures::future::lazy;
@@ -20,18 +21,18 @@ use std::time::Duration;
 
 use crossbeam_channel::{bounded, select, tick, Receiver};
 
-mod parser;
+
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ctrl_c_events = ctrl_channel()?;
     let ticks = tick(Duration::from_secs(1));
 
-    println!("LOGGER DIR: {}", parser::get_main().unwrap().display());
-    let logger = asio_logger::Logger::new(parser::get_main().unwrap());
+    println!("LOGGER DIR: {}", util::get_main().unwrap().display());
+    let logger = asio_logger::Logger::new(util::get_main().unwrap());
     logger.log("STARTING SERVER");
 
-    let server_details = &mut parser::ServerDetails::default();
-    parser::read_contents(server_details).unwrap();
+    let server_details = &mut util::ServerDetails::default();
+    util::read_contents(server_details).unwrap();
 
     let fppath = Path::new(server_details.root_url.as_ref().unwrap());
     let fpparent: PathBuf = PathBuf::from(server_details.parent_dir.as_ref().unwrap());
@@ -41,7 +42,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut fserver = frame_host::server::Server::new(fppath);
     fserver.parent(fpparent);
     fserver.child(fpath);
-    let mut output = parser::get_main().unwrap();
+    let mut output = util::get_main().unwrap();
     output.push("out.txt");
     fserver.output(output);
 

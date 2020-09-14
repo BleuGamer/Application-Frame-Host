@@ -9,6 +9,7 @@ edition = "2018"
 [dependencies]
 frame-host = { path = "../frame-host" }
 asio-logger = { path = "../asio-logger" }
+util = { path = "../util" }
 
 log = "0.4.11"
 futures = "0.3"
