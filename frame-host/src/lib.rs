@@ -22,7 +22,7 @@ pub mod server {
         ///
         /// TODO: Full implimentation examples.
         pub fn new(root: impl Into<PathBuf>) -> Server {
-            // let raw: &str = &Self::read_file()[..];
+            // let raw: &str = &Self::read_cwd_file()[..];
             // let config: serde_json::Value = serde_json::from_str(raw)?;
 
             let server = Server {

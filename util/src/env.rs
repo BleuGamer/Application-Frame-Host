@@ -1,11 +1,8 @@
 use std::env;
-use std::fs::File;
 use std::io;
-use std::io::prelude::*;
-use std::io::{BufRead, BufReader};
-use std::path::{Path, PathBuf};
+use std::path::{PathBuf};
 
-pub fn get_pwd() -> io::Result<PathBuf> {
+pub fn get_cwd() -> io::Result<PathBuf> {
     let mut pwd = env::current_exe()?;
     pwd.pop();
     Ok(pwd)

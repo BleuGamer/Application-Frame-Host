@@ -27,11 +27,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ctrl_c_events = ctrl_channel()?;
     let ticks = tick(Duration::from_secs(1));
 
-    let logger = asio_logger::Logger::new(util::env::get_pwd().unwrap());
+    let logger = asio_logger::Logger::new(util::env::get_cwd().unwrap());
     logger.log("STARTING SERVER");
 
     let server_details = &mut util::parser::ServerDetails::default();
-    util::parser::read_contents(server_details).unwrap();
+    util::parser::read_contents("factorio.json", server_details).unwrap();
 
     let fppath = Path::new(server_details.root_url.as_ref().unwrap());
     let fpparent: PathBuf = PathBuf::from(server_details.parent_dir.as_ref().unwrap());
@@ -41,7 +41,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut fserver = frame_host::server::Server::new(fppath);
     fserver.parent(fpparent);
     fserver.child(fpath);
-    let mut output = util::env::get_pwd().unwrap();
+    let mut output = util::env::get_cwd().unwrap();
     output.push("out.txt");
     fserver.output(output);
 
