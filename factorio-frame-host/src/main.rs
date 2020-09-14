@@ -27,12 +27,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ctrl_c_events = ctrl_channel()?;
     let ticks = tick(Duration::from_secs(1));
 
-    println!("LOGGER DIR: {}", util::get_main().unwrap().display());
-    let logger = asio_logger::Logger::new(util::get_main().unwrap());
+    let logger = asio_logger::Logger::new(util::env::get_pwd().unwrap());
     logger.log("STARTING SERVER");
 
-    let server_details = &mut util::ServerDetails::default();
-    util::read_contents(server_details).unwrap();
+    let server_details = &mut util::parser::ServerDetails::default();
+    util::parser::read_contents(server_details).unwrap();
 
     let fppath = Path::new(server_details.root_url.as_ref().unwrap());
     let fpparent: PathBuf = PathBuf::from(server_details.parent_dir.as_ref().unwrap());
@@ -42,7 +41,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut fserver = frame_host::server::Server::new(fppath);
     fserver.parent(fpparent);
     fserver.child(fpath);
-    let mut output = util::get_main().unwrap();
+    let mut output = util::env::get_pwd().unwrap();
     output.push("out.txt");
     fserver.output(output);
 
@@ -54,8 +53,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     fserver.arg("--start-server");
     //fserver.arg("/opt/factorio/1.0/saves/test.zip");
     fserver.start();
-
-    // println!("yoooooo: {}", server_details.default_save.as_ref().unwrap());
 
     let tpath = std::env::current_dir()?;
     log!(&logger, "PWD: {}", tpath.display());
