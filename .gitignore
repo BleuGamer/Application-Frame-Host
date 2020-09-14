@@ -6,3 +6,6 @@
 
 # Ignore files from `rustfmt`.
 **/*.rs.bk
+
+# Ignore vscode specific files.
+/.vscode
