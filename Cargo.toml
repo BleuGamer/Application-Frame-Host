@@ -1,8 +1,8 @@
 [workspace]
 
 members = [
-    "util",
-    "factorio-frame-host",
-    "frame-host",
-    "asio-logger",
+    "src/util",
+    "src/factorio-frame-host",
+    "src/frame-host",
+    "src/asio-logger",
 ]
