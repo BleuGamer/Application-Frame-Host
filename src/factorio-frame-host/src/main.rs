@@ -6,6 +6,7 @@ use asio_logger;
 use asio_logger::log;
 use util;
 use frame_host;
+use web_api;
 
 use futures::future::lazy;
 use std::borrow::Cow;
@@ -56,7 +57,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let tpath = std::env::current_dir()?;
     log!(&logger, "PWD: {}", tpath.display());
-    
+
+    web_api::start()?;    
 
     loop {
         select! {
