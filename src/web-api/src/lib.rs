@@ -1,23 +1,17 @@
 use util;
 
-use actix_files::NamedFile;
-use actix_web::{HttpRequest, Result};
-use std::path::PathBuf;
-
-async fn index(req: HttpRequest) -> Result<NamedFile> {
-    let path: PathBuf = req.match_info().query("filename").parse().unwrap();
-    Ok(NamedFile::open(path)?)
-}
+use actix_files as fs;
+use actix_web::{App, HttpServer};
 
 #[actix_web::main]
 pub async fn start() -> std::io::Result<()> {
-    use actix_web::{web, App, HttpServer};
+    let mut app_dir = util::env::get_cwd().unwrap();
+    app_dir = app_dir.join("app");
 
-    let file = util::env::get_cwd().unwrap().join("App").join("index.html");
-    println!("PATH: {}: ", file.display());
-
-    HttpServer::new(move || App::new().route(file.to_str().unwrap(), web::get().to(index)))
-        .bind("127.0.0.1:8080")?
-        .run()
-        .await
+    HttpServer::new(move || {
+        App::new().service(fs::Files::new("/app", app_dir.to_str().unwrap()).show_files_listing())
+    })
+    .bind("127.0.0.1:8080")?
+    .run()
+    .await
 }

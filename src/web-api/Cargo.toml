@@ -8,8 +8,9 @@ edition = "2018"
 asio-logger = { path = "../asio-logger" }
 util = { path = "../util" }
 
-actix = "0.10"
 actix-web = "3.0.2"
 actix-files = "0.3.0"
-actix_derive = "0.5"
-actix-rt = "1.0"
+actix-session = "0.4.0"
+actix-utils = "2.0.0"
+
+env_logger = "0.7.1"
