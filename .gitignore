@@ -2,7 +2,7 @@
 /target
 
 # Cargo.lock should be ignored when creating a library.
-#Cargo.lock
+/Cargo.lock
 
 # Ignore files from `rustfmt`.
 **/*.rs.bk
