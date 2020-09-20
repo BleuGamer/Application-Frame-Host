@@ -1,11 +1,12 @@
-# Ignore build directory.
+# Ignore IDE files.
+/.vscode
+.idea/
+
+# Ignore rust intermediates and binaries.
 /target
-
-# Cargo.lock should be ignored when creating a library.
 /Cargo.lock
-
-# Ignore files from `rustfmt`.
 **/*.rs.bk
 
-# Ignore vscode specific files.
-/.vscode
+# Node.js operations and intermediates.
+/package-lock.json
+node_modules/
