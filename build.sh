@@ -9,6 +9,8 @@ set -e
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cd $DIR
 
+npm run build
+
 if cargo "$@"; then
     [ -d "${DIR}/target/debug" ] && cp -R "${DIR}/resources/." "${DIR}/target/debug/"
     [ -d "${DIR}/target/release" ] && cp -R "${DIR}/resources/." "${DIR}/target/release/"

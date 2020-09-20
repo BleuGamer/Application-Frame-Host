@@ -2,9 +2,9 @@
 #![allow(unused_imports)]
 #![allow(unused_variables)]
 
-use std::fs::OpenOptions;
-use slog::{Drain, o, info, warn, error};
+use slog::{error, info, o, warn, Drain};
 use std::collections::BTreeMap;
+use std::fs::OpenOptions;
 use std::path::PathBuf;
 
 pub struct Logger {
@@ -14,7 +14,6 @@ pub struct Logger {
 
 impl Logger {
     pub fn new(dir: impl Into<PathBuf>) -> Logger {
-
         let decorator = slog_term::TermDecorator::new().build();
         let drain = slog_term::FullFormat::new(decorator).build().fuse();
         let drain = slog_async::Async::new(drain).build().fuse();
@@ -39,7 +38,7 @@ impl Logger {
             .truncate(true)
             .open(dir.join(name.into()))
             .unwrap();
-        
+
         let decorator = slog_term::PlainDecorator::new(file);
         let drain = slog_term::FullFormat::new(decorator).build().fuse();
         let drain = slog_async::Async::new(drain).build().fuse();
@@ -48,7 +47,7 @@ impl Logger {
         logger
     }
 
-    pub fn log(&self, msg: &str) -> &Self{
+    pub fn log(&self, msg: &str) -> &Self {
         info!(self.output, "{}", msg);
         info!(self.files["All"], "{}", msg);
 

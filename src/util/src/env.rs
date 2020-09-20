@@ -1,6 +1,6 @@
 use std::env;
 use std::io;
-use std::path::{PathBuf};
+use std::path::PathBuf;
 
 pub fn get_cwd() -> io::Result<PathBuf> {
     let mut pwd = env::current_exe()?;

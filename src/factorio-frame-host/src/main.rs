@@ -4,8 +4,8 @@
 
 use asio_logger;
 use asio_logger::log;
-use util;
 use frame_host;
+use util;
 use web_api;
 
 use futures::future::lazy;
@@ -21,8 +21,6 @@ use std::thread;
 use std::time::Duration;
 
 use crossbeam_channel::{bounded, select, tick, Receiver};
-
-
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ctrl_c_events = ctrl_channel()?;
@@ -47,9 +45,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     fserver.output(output);
 
     log!(&logger, "Root: {}", fserver.root.display());
-    log!(&logger, "Parent: {}", fserver.parent.as_mut().unwrap().display());
-    log!(&logger, "child: {}", fserver.child.as_mut().unwrap().display());
-    log!(&logger, "Output File: {}", fserver.output.as_mut().unwrap().display());
+    log!(
+        &logger,
+        "Parent: {}",
+        fserver.parent.as_mut().unwrap().display()
+    );
+    log!(
+        &logger,
+        "child: {}",
+        fserver.child.as_mut().unwrap().display()
+    );
+    log!(
+        &logger,
+        "Output File: {}",
+        fserver.output.as_mut().unwrap().display()
+    );
 
     fserver.arg("--start-server");
     //fserver.arg("/opt/factorio/1.0/saves/test.zip");
@@ -58,7 +68,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let tpath = std::env::current_dir()?;
     log!(&logger, "PWD: {}", tpath.display());
 
-    web_api::start()?;    
+    web_api::start()?;
 
     loop {
         select! {

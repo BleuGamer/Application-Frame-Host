@@ -1,6 +1,6 @@
-use std::fs::{File, write};
-use std::io::prelude::*;
 use serde_json::{Result, Value};
+use std::fs::{write, File};
+use std::io::prelude::*;
 use std::io::BufReader;
 
 // This will eventually be agnostic.
