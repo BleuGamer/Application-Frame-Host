@@ -8,5 +8,6 @@
 **/*.rs.bk
 
 # Node.js operations and intermediates.
+resources/app/
 /package-lock.json
 node_modules/
