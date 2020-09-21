@@ -3,14 +3,23 @@ import { NgModule } from '@angular/core';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
+import { DefaultModule } from './layouts/default/default.module';
+import { 
+  NbSidebarModule, 
+  NbLayoutModule 
+} from '@nebular/theme';
 
 @NgModule({
   declarations: [
-    AppComponent
+    AppComponent,
   ],
   imports: [
+    NbLayoutModule,
+    NbSidebarModule.forRoot(),
+
     BrowserModule,
-    AppRoutingModule
+    AppRoutingModule,
+    DefaultModule,
   ],
   providers: [],
   bootstrap: [AppComponent]
