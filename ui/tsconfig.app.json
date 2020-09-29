@@ -9,7 +9,14 @@
     "./main.ts",
     "./polyfills.ts"
   ],
+  "exclude": [
+    "test.ts",
+    "**/*.spec.ts",
+    "../node_modules/@nebular/**/*.spec.ts"
+  ],
   "include": [
-    "./**/*.d.ts"
+    "../ui/*.ts",
+    "../ui/**/*.ts",
+    "../node_modules/@nebular/**/*.ts"
   ]
 }

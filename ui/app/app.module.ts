@@ -35,7 +35,6 @@ import { HttpClientModule } from '@angular/common/http';
     AppRoutingModule,
     CoreModule.forRoot(),
   ],
-  providers: [],
   bootstrap: [AppComponent]
 })
 export class AppModule {}
