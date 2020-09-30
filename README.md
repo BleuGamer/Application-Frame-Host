@@ -2,7 +2,7 @@
 
 Application Frame Host is an application admin interface for use in servers or
 other remote use cases written in Rust and Angular.js. If you're running a game
-server (i.e. Factorio), youc ould go into the webserver where this is hosted and
+server (i.e. Factorio), you could go into the webserver where this is hosted and
 apply commands and logic to your application to manipulate it, start/stop it,
 access logs or system resources, etc.
 
