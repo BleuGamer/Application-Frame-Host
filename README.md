@@ -23,11 +23,11 @@ Rustc: **1.46.0**
 
 ### Frontend Development:
 
-npm install
-npm run build
+npm install &&
+npm run build &&
 npm run start
 
 ### With Rust:
 
-npm install
+npm install &&
 ./build.sh build
