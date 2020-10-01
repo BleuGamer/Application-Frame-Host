@@ -1,12 +1,9 @@
 use util;
 
 use actix_files as fs;
-use actix_web::{error, get, guard, web, App, HttpResponse, HttpServer, Result};
-
-#[get("/")]
-async fn index() -> Result<fs::NamedFile> {
-    Ok(fs::NamedFile::open("./app/index.html")?)
-}
+use actix::{Actor, StreamHandler};
+use actix_web::{ Error, web, App, HttpResponse, HttpRequest, HttpServer, Result};
+use actix_web_actors::ws;
 
 #[actix_web::main]
 pub async fn start() -> std::io::Result<()> {
@@ -20,4 +17,39 @@ pub async fn start() -> std::io::Result<()> {
     .bind("127.0.0.1:8080")?
     .run()
     .await
+}
+
+struct WebSocket;
+
+impl Actor for WebSocket {
+    type Context = ws::WebsocketContext<Self>;
+}
+
+impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WebSocket {
+    fn handle(
+        &mut self,
+        msg: Result<ws::Message, ws::ProtocolError>,
+        ctx: &mut Self::Context,
+    ) {
+        match msg {
+            Ok(ws::Message::Ping(msg)) => ctx.pong(&msg),
+            Ok(ws::Message::Text(text)) => ctx.text(text),
+            Ok(ws::Message::Binary(bin)) => ctx.binary(bin),
+            _ => (),
+        }
+    }
+}
+
+async fn index(req: HttpRequest, stream: web::Payload) -> Result<HttpResponse, Error> {
+    let resp = ws::start(WebSocket {}, &req, stream);
+    println!("{:?}", resp);
+    resp
+}
+
+#[actix_web::main]
+pub async fn StartWebSocket() -> std::io::Result<()> {
+    HttpServer::new(|| App::new().route("/ws/", web::get().to(index)))
+        .bind("127.0.0.1:8080")?
+        .run()
+        .await
 }

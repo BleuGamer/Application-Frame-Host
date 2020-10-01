@@ -63,12 +63,20 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     fserver.arg("--start-server");
     //fserver.arg("/opt/factorio/1.0/saves/test.zip");
-    fserver.start();
+    //fserver.start();
 
     let tpath = std::env::current_dir()?;
     log!(&logger, "PWD: {}", tpath.display());
 
-    web_api::start()?;
+    std::thread::spawn(move || {
+        
+        // This is unsafe.
+        // Temporary testing.
+        // TODO: Proper Actix Async handling.
+        web_api::start();
+        web_api::StartWebSocket();
+
+    });
 
     loop {
         select! {
