@@ -3,7 +3,7 @@
 #![allow(unused_variables)]
 
 use asio_logger;
-use asio_logger::log;
+use asio_logger::info;
 use frame_host;
 use util;
 use web_api;
@@ -27,7 +27,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ticks = tick(Duration::from_secs(1));
 
     let logger = asio_logger::Logger::new(util::env::get_cwd().unwrap());
-    logger.log("STARTING SERVER");
+    logger.log_info("STARTING SERVER");
 
     let server_details = &mut util::parser::ServerDetails::default();
     util::parser::read_contents("factorio.json", server_details).unwrap();
@@ -44,18 +44,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     output.push("out.txt");
     fserver.output(output);
 
-    log!(&logger, "Root: {}", fserver.root.display());
-    log!(
+    info!(&logger, "Root: {}", fserver.root.display());
+    info!(
         &logger,
         "Parent: {}",
         fserver.parent.as_mut().unwrap().display()
     );
-    log!(
+    info!(
         &logger,
         "child: {}",
         fserver.child.as_mut().unwrap().display()
     );
-    log!(
+    info!(
         &logger,
         "Output File: {}",
         fserver.output.as_mut().unwrap().display()
@@ -66,7 +66,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     //fserver.start();
 
     let tpath = std::env::current_dir()?;
-    log!(&logger, "PWD: {}", tpath.display());
+    info!(&logger, "PWD: {}", tpath.display());
 
     std::thread::spawn(move || {
         
@@ -82,11 +82,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         select! {
             recv(ticks) -> _ =>
             {
-                logger.log("Working!");
+                info!(&logger, "Working!");
             }
             recv(ctrl_c_events) -> _ =>
             {
-                logger.log("Stopping Factorio Server.");
+                info!(&logger, "Stopping Factorio Server.");
                 fserver.stop();
                 break;
             }
