@@ -19,7 +19,7 @@ contribute and use the software.
 
 ### Versions: 
 Node.js: **v12.18.4**
-Rustc: **1.46.0**
+Rustc: **1.47.0**
 
 ### Frontend Development:
 

@@ -13,7 +13,122 @@ use std::collections::BTreeMap;
 use std::fmt::write;
 use std::fs::OpenOptions;
 use std::path::PathBuf;
+use std::sync::mpsc::{Receiver, Sender};
 
+pub struct Context<'a> {
+    logger: &'a Logger,
+}
+
+impl<'a> Context<'a> {
+    pub fn new(logger: &'a Logger, dir: impl Into<PathBuf>) -> Self {
+        let mut context = Context { logger: logger };
+
+        let log = Context::create_file_logger("All.txt", dir.into());
+        logger.add_context("All", log);
+
+        context
+    }
+
+    pub fn fsink(&mut self, dir: impl Into<PathBuf>, name: impl Into<String>) -> &mut Self {
+        let _dir = dir.into();
+        let _name = name.into();
+        let _log = Context::create_file_logger(_name.as_str(), _dir);
+        self.logger.add_context(_name, _log);
+        self
+    }
+
+    fn create_file_logger<'b>(name: &'b str, dir: PathBuf) -> slog::Logger {
+        let file = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(dir.join(&name))
+            .unwrap();
+
+        let decorator = slog_term::PlainDecorator::new(file);
+        let drain = slog_term::FullFormat::new(decorator).build().fuse();
+        let drain = slog_async::Async::new(drain).build().fuse();
+        let logger = slog::Logger::root(drain, o!());
+
+        logger
+    }
+}
+
+pub trait Messenger {
+    fn send(&self, msg: &str);
+}
+
+pub struct Logger<'a, T: Messenger> {
+    messenger: &'a T,
+    output: slog::Logger,
+    files: BTreeMap<String, slog::Logger>,
+}
+
+impl<'a, T> Logger<'a, T>
+where
+    T: Messenger,
+{
+    pub fn new(messenger: &T) -> Logger<T> {
+        let decorator = slog_term::TermDecorator::new().build();
+        let drain = slog_term::FullFormat::new(decorator).build().fuse();
+        let drain = slog_async::Async::new(drain).build().fuse();
+        let _out = slog::Logger::root(drain, o!());
+
+        let logger = Logger {
+            output: _out,
+            files: BTreeMap::new(),
+        };
+
+        logger
+    }
+
+    fn add_context(&self, name: impl Into<String>, log: slog::Logger) -> &Self {
+        self.files.insert(name.into(), log);
+        self
+    }
+
+    fn log_info<S: Into<String>>(&self, msg: S) -> &Self {
+        let _msg = msg.into();
+        _info!(self.output, "{}", _msg);
+
+        self
+    }
+}
+
+/* FOR USE LATER
+#[derive(Clone)]
+struct LoggerHandle {
+    sender: Sender<String>,
+}
+
+impl LoggerHandle {
+    fn log_info<S: Into<String>>(&self, msg: S) {
+        // Don't actually do the logging here, who knows what thread invoked us!
+        self.sender.send(msg.into()).ok();
+    }
+}
+
+-----------------------
+
+pub struct Logger {
+    output: slog::Logger,
+    files: BTreeMap<String, slog::Logger>,
+    incoming: Receiver<String>,
+}
+
+impl Logger {
+    pub fn poll_once(&self) {
+        while let Ok(msg) = self.incoming.try_recv() {
+            // log for real now, now that we're in the desired thread and environment
+            self.log_info(msg);
+        }
+    }
+}
+
+
+*/
+
+/*
 pub struct Logger {
     output: slog::Logger,
     files: BTreeMap<&'static str, slog::Logger>,
@@ -153,6 +268,7 @@ macro_rules! trace {
         $crate::Logger::log_trace($logger, format!($($message)*))
     }
 }
+*/
 
 /*
 // This is something to play with later for greater control.
