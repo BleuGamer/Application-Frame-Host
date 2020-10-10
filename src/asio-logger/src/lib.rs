@@ -54,20 +54,24 @@ impl<'a> Context<'a> {
     }
 }
 
-pub trait Messenger {
-    fn send(&self, msg: &str);
+#[derive(Clone)]
+struct LoggerHandle {
+    sender: Sender<String>,
 }
 
-pub struct Logger<'a, T: Messenger> {
-    messenger: &'a T,
+impl LoggerHandle {
+    fn log_info<S: Into<String>>(&self, msg: S) {
+        // Don't actually do the logging here, who knows what thread invoked us!
+        self.sender.send(msg.into()).ok();
+    }
+}
+
+pub struct Logger {
     output: slog::Logger,
     files: BTreeMap<String, slog::Logger>,
 }
 
-impl<'a, T> Logger<'a, T>
-where
-    T: Messenger,
-{
+impl Logger {
     pub fn new(messenger: &T) -> Logger<T> {
         let decorator = slog_term::TermDecorator::new().build();
         let drain = slog_term::FullFormat::new(decorator).build().fuse();
@@ -96,6 +100,15 @@ where
 }
 
 /* FOR USE LATER
+
+Ok, so Arc<Mutex> will ensure that only one reader or one writer can exist at a time.
+Arc<RwLock> will allow any number of readers, or one writer at a time.
+Also, only use Rc in a single-threaded context.
+
+Cell, RefCell, and Box should also only be used in a single-threaded context.
+
+----------------------------
+
 #[derive(Clone)]
 struct LoggerHandle {
     sender: Sender<String>,
