@@ -1,8 +1,8 @@
 use util;
 
-use actix_files as fs;
 use actix::{Actor, StreamHandler};
-use actix_web::{ Error, web, App, HttpResponse, HttpRequest, HttpServer, Result};
+use actix_files as fs;
+use actix_web::{web, App, Error, HttpRequest, HttpResponse, HttpServer, Result};
 use actix_web_actors::ws;
 
 #[actix_web::main]
@@ -11,8 +11,7 @@ pub async fn start() -> std::io::Result<()> {
     dir.push("app");
 
     HttpServer::new(move || {
-        App::new()
-            .service(fs::Files::new("/", dir.to_str().unwrap()).index_file("index.html"))
+        App::new().service(fs::Files::new("/", dir.to_str().unwrap()).index_file("index.html"))
     })
     .bind("127.0.0.1:8080")?
     .run()
@@ -26,11 +25,7 @@ impl Actor for WebSocket {
 }
 
 impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WebSocket {
-    fn handle(
-        &mut self,
-        msg: Result<ws::Message, ws::ProtocolError>,
-        ctx: &mut Self::Context,
-    ) {
+    fn handle(&mut self, msg: Result<ws::Message, ws::ProtocolError>, ctx: &mut Self::Context) {
         match msg {
             Ok(ws::Message::Ping(msg)) => ctx.pong(&msg),
             Ok(ws::Message::Text(text)) => ctx.text(text),

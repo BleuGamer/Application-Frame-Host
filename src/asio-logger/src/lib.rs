@@ -2,15 +2,15 @@
 #![allow(unused_imports)]
 #![allow(unused_variables)]
 
-use slog::error as _error;
-use slog::warn as _warn;
-use slog::info as _info;
 use slog::debug as _debug;
+use slog::error as _error;
+use slog::info as _info;
 use slog::trace as _trace;
+use slog::warn as _warn;
 
 use slog::{o, Drain};
-use std::fmt::write;
 use std::collections::BTreeMap;
+use std::fmt::write;
 use std::fs::OpenOptions;
 use std::path::PathBuf;
 
@@ -38,10 +38,13 @@ impl Logger {
         logger
     }
 
-    pub fn add_context(&mut self, name: Option<&'static str>, dir: impl Into<PathBuf>) -> &mut Self {
-
+    pub fn add_context(
+        &mut self,
+        name: Option<&'static str>,
+        dir: impl Into<PathBuf>,
+    ) -> &mut Self {
         let log = Logger::create_file_logger(name.unwrap(), dir.into());
-        
+
         self.files.insert(name.unwrap(), log);
 
         self

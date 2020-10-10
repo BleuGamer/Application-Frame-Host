@@ -69,13 +69,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!(&logger, "PWD: {}", tpath.display());
 
     std::thread::spawn(move || {
-        
         // This is unsafe.
         // Temporary testing.
         // TODO: Proper Actix Async handling.
         web_api::start();
         web_api::StartWebSocket();
-
     });
 
     loop {
