@@ -158,5 +158,8 @@
       }
     }
   },
-  "defaultProject": "application-frame-host"
+  "defaultProject": "application-frame-host",
+  "cli": {
+    "analytics": false
+  }
 }

@@ -25,7 +25,7 @@ impl<'a> Context<'a> {
         let mut context = Context { logger: logger };
 
         let log = Context::create_file_logger("All.txt", dir.into());
-        logger.add_context("All", log);
+        //logger.add_context("All", log);
 
         context
     }
@@ -34,7 +34,7 @@ impl<'a> Context<'a> {
         let _dir = dir.into();
         let _name = name.into();
         let _log = Context::create_file_logger(_name.as_str(), _dir);
-        self.logger.add_context(_name, _log);
+        //self.logger.add_context(_name, _log);
         self
     }
 
@@ -56,12 +56,12 @@ impl<'a> Context<'a> {
 }
 
 #[derive(Clone)]
-struct LoggerHandle {
+pub struct LoggerHandle {
     sender: Sender<String>,
 }
 
 impl LoggerHandle {
-    fn log_info<S: Into<String>>(&self, msg: S) {
+    pub fn log_info<S: Into<String>>(&self, msg: S) {
         // Don't actually do the logging here, who knows what thread invoked us!
         self.sender.send(msg.into()).ok();
     }
@@ -115,21 +115,34 @@ impl Logger {
     }
 }
 
-struct Logging<'a> {
+pub struct Logging<'a> {
     handle: LoggerHandle,
     logger: RwLock<&'a Logger>
 }
 
 impl<'a> Logging<'a> {
-    pub fn new() -> Logging<'a> {
-        let (logh, log) = Logger::new();
+    pub fn new(logh: LoggerHandle, log: &'a Logger) -> Logging<'a> {
 
         let logging = Logging {
             handle: logh,
-            logger: RwLock::new(&log)
+            logger: RwLock::new(log)
         };
 
         logging
+    }
+
+    pub fn log_info<S: Into<String>>(&self, msg: S) -> &Self {
+        self.handle.log_info(msg);
+        self.logger.try_read().unwrap().poll_once();
+
+        self
+    }
+}
+
+#[macro_export]
+macro_rules! info {
+    ($logging:expr, $($message:tt)*) => {
+        $crate::Logging::log_info($logging, format!($($message)*))
     }
 }
 

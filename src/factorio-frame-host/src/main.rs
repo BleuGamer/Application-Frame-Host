@@ -26,7 +26,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ctrl_c_events = ctrl_channel()?;
     let ticks = tick(Duration::from_secs(1));
 
-    let logger = asio_logger::Logger::new(util::env::get_cwd().unwrap());
+    let (lhandle, _logger) = asio_logger::Logger::new();
+    let logger = asio_logger::Logging::new(lhandle, &_logger);
+
     logger.log_info("STARTING SERVER");
 
     let server_details = &mut util::parser::ServerDetails::default();
