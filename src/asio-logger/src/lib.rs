@@ -13,7 +13,8 @@ use std::collections::BTreeMap;
 use std::fmt::write;
 use std::fs::OpenOptions;
 use std::path::PathBuf;
-use std::sync::mpsc::{Receiver, Sender};
+use std::sync::mpsc::{Receiver, Sender, channel};
+use std::sync::RwLock;
 
 pub struct Context<'a> {
     logger: &'a Logger,
@@ -69,24 +70,39 @@ impl LoggerHandle {
 pub struct Logger {
     output: slog::Logger,
     files: BTreeMap<String, slog::Logger>,
+    incoming: Receiver<String>,
 }
 
 impl Logger {
-    pub fn new(messenger: &T) -> Logger<T> {
+    pub fn new() -> (LoggerHandle, Logger) {
         let decorator = slog_term::TermDecorator::new().build();
         let drain = slog_term::FullFormat::new(decorator).build().fuse();
         let drain = slog_async::Async::new(drain).build().fuse();
         let _out = slog::Logger::root(drain, o!());
 
+        let (tx, rx) = channel::<String>();
+
         let logger = Logger {
             output: _out,
             files: BTreeMap::new(),
+            incoming: rx
         };
 
-        logger
+        let logger_handle = LoggerHandle {
+            sender: tx
+        };
+
+        (logger_handle, logger)
     }
 
-    fn add_context(&self, name: impl Into<String>, log: slog::Logger) -> &Self {
+    pub fn poll_once(&self) {
+        while let Ok(msg) = self.incoming.try_recv() {
+            // log for real now, now that we're in the desired thread and environment
+            self.log_info(msg);
+        }
+    }
+
+    fn add_context(&mut self, name: impl Into<String>, log: slog::Logger) -> &mut Self {
         self.files.insert(name.into(), log);
         self
     }
@@ -96,6 +112,24 @@ impl Logger {
         _info!(self.output, "{}", _msg);
 
         self
+    }
+}
+
+struct Logging<'a> {
+    handle: LoggerHandle,
+    logger: RwLock<&'a Logger>
+}
+
+impl<'a> Logging<'a> {
+    pub fn new() -> Logging<'a> {
+        let (logh, log) = Logger::new();
+
+        let logging = Logging {
+            handle: logh,
+            logger: RwLock::new(&log)
+        };
+
+        logging
     }
 }
 
