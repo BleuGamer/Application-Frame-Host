@@ -15,17 +15,19 @@ use std::fs::OpenOptions;
 use std::path::PathBuf;
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::sync::RwLock;
+use std::ops::DerefMut;
+use std::sync::Arc;
 
 pub struct Context<'a> {
-    logger: &'a Logger,
+    logger: &'a Logging,
 }
 
 impl<'a> Context<'a> {
-    pub fn new(logger: &'a Logger, dir: impl Into<PathBuf>) -> Self {
+    pub fn new(logger: &'a Logging, dir: impl Into<PathBuf>) -> Self {
         let mut context = Context { logger: logger };
 
         let log = Context::create_file_logger("All.txt", dir.into());
-        //logger.add_context("All", log);
+        context.logger.add_context("All", log);
 
         context
     }
@@ -52,6 +54,10 @@ impl<'a> Context<'a> {
         let logger = slog::Logger::root(drain, o!());
 
         logger
+    }
+
+    pub fn log_info<S: Into<String>>(&self, msg: S) {
+        self.logger.handle.sender
     }
 }
 
@@ -102,7 +108,7 @@ impl Logger {
         }
     }
 
-    fn add_context(&mut self, name: impl Into<String>, log: slog::Logger) -> &mut Self {
+    fn context(&mut self, name: impl Into<String>, log: slog::Logger) -> &mut Self {
         self.files.insert(name.into(), log);
         self
     }
@@ -110,25 +116,32 @@ impl Logger {
     fn log_info<S: Into<String>>(&self, msg: S) -> &Self {
         let _msg = msg.into();
         _info!(self.output, "{}", _msg);
+        _info!(self.files["All"], "{}", _msg);
 
         self
     }
 }
 
-pub struct Logging<'a> {
+pub struct Logging {
     handle: LoggerHandle,
-    logger: RwLock<&'a Logger>
+    logger: Arc<RwLock<Logger>>
 }
 
-impl<'a> Logging<'a> {
-    pub fn new(logh: LoggerHandle, log: &'a Logger) -> Logging<'a> {
+impl<'a> Logging {
+    pub fn new(logh: LoggerHandle, log: Arc<RwLock<Logger>>) -> Logging {
 
         let logging = Logging {
             handle: logh,
-            logger: RwLock::new(log)
+            logger: log
         };
 
         logging
+    }
+
+    pub fn add_context(&self, name: impl Into<String>, log: slog::Logger) -> &Self {
+        self.logger.try_write().unwrap().context(name.into(), log);
+
+        self
     }
 
     pub fn log_info<S: Into<String>>(&self, msg: S) -> &Self {

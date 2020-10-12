@@ -19,6 +19,8 @@ use std::path::{Path, PathBuf};
 use std::process::Child;
 use std::thread;
 use std::time::Duration;
+use std::sync::RwLock;
+use std::sync::Arc;
 
 use crossbeam_channel::{bounded, select, tick, Receiver};
 
@@ -27,7 +29,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ticks = tick(Duration::from_secs(1));
 
     let (lhandle, _logger) = asio_logger::Logger::new();
-    let logger = asio_logger::Logging::new(lhandle, &_logger);
+    let _locked_logger = Arc::new(RwLock::new(_logger));
+    let _logger = asio_logger::Logging::new(lhandle, _locked_logger);
+    let logger = asio_logger::Context::new(&_logger, util::env::get_cwd().unwrap());
 
     logger.log_info("STARTING SERVER");
 
@@ -87,7 +91,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             recv(ctrl_c_events) -> _ =>
             {
                 info!(&logger, "Stopping Factorio Server.");
-                fserver.stop();
+                // fserver.stop();
                 break;
             }
         }
