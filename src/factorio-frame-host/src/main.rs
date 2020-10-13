@@ -28,10 +28,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ctrl_c_events = ctrl_channel()?;
     let ticks = tick(Duration::from_secs(1));
 
-    let (lhandle, _logger) = asio_logger::Logger::new();
-    let _locked_logger = Arc::new(RwLock::new(_logger));
-    let _logger = asio_logger::Logging::new(lhandle, _locked_logger);
-    let logger = asio_logger::Context::new(&_logger, util::env::get_cwd().unwrap());
+    let (lhandle, mut slogger) = asio_logger::Logger::new();
+    slogger.all_log(util::env::get_cwd().unwrap());
+    let _locked_logger = Arc::new(RwLock::new(slogger));
+    let _logger = Arc::new(asio_logger::Logging::new(lhandle, _locked_logger));
+    let logger = Arc::new(asio_logger::Context::new(Arc::clone(&_logger), util::env::get_cwd().unwrap()));
 
     logger.log_info("STARTING SERVER");
 
@@ -43,7 +44,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let fpath: PathBuf = PathBuf::from(server_details.executable.as_ref().unwrap());
     //.join("x64").join("factorio");
 
-    let mut fserver = frame_host::server::Server::new(fppath);
+    let mut fserver = frame_host::server::Server::new(_logger, fppath);
     fserver.parent(fpparent);
     fserver.child(fpath);
     let mut output = util::env::get_cwd().unwrap();

@@ -6,6 +6,7 @@ edition = "2018"
 
 [dependencies]
 asio-logger = { path = "../asio-logger" }
+util = { path = "../util" }
 
 serde = "1.0"
 serde_json = "1.0"

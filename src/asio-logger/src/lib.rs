@@ -18,16 +18,17 @@ use std::sync::RwLock;
 use std::ops::DerefMut;
 use std::sync::Arc;
 
-pub struct Context<'a> {
-    logger: &'a Logging,
+pub struct Context {
+    logger: Arc<Logging>,
+    files: Vec<String>,
 }
 
-impl<'a> Context<'a> {
-    pub fn new(logger: &'a Logging, dir: impl Into<PathBuf>) -> Self {
-        let mut context = Context { logger: logger };
-
-        let log = Context::create_file_logger("All.txt", dir.into());
-        context.logger.add_context("All", log);
+impl Context {
+    pub fn new(logger: Arc<Logging>, dir: impl Into<PathBuf>) -> Self {
+        let context = Context { 
+            logger: logger,
+            files: Vec::new(),
+        };
 
         context
     }
@@ -35,12 +36,95 @@ impl<'a> Context<'a> {
     pub fn fsink(&mut self, dir: impl Into<PathBuf>, name: impl Into<String>) -> &mut Self {
         let _dir = dir.into();
         let _name = name.into();
-        let _log = Context::create_file_logger(_name.as_str(), _dir);
-        //self.logger.add_context(_name, _log);
+        let _log = Logger::create_file_logger(_name.as_str(), _dir);
+        self.logger.add_context(&_name, _log);
+        self.files.insert(self.files.len(), _name);
         self
     }
 
-    fn create_file_logger<'b>(name: &'b str, dir: PathBuf) -> slog::Logger {
+    pub fn log_info<S: Into<String>>(&self, msg: S) -> &Self {
+        let _msg = msg.into();
+        self.logger.log_info(&_msg);
+        if !self.files.is_empty()
+        {
+            let _files = self.files.clone();
+            self.logger.log_info_files(_files, _msg);
+        }
+        self
+    }
+}
+
+#[derive(Clone)]
+pub struct LoggerHandle {
+    sender: Sender<String>,
+    fsender: Sender<(Vec<String>, String)>,
+}
+
+impl LoggerHandle {
+    pub fn log_info<S: Into<String>>(&self, msg: S) {
+        // Don't actually do the logging here, who knows what thread invoked us!
+        self.sender.send(msg.into()).ok();
+    }
+
+    pub fn send_context<S: Into<String>>(&self, files: Vec<String>, msg: S) {
+        self.fsender.send((files, msg.into())).ok();
+    }
+}
+
+pub struct Logger {
+    output: slog::Logger,
+    files: BTreeMap<String, slog::Logger>,
+    incoming: Receiver<String>,
+    fincoming: Receiver<(Vec<String>, String)>,
+
+    aggregate_log: bool,
+}
+
+impl Logger {
+    pub fn new() -> (LoggerHandle, Logger) {
+        let decorator = slog_term::TermDecorator::new().build();
+        let drain = slog_term::FullFormat::new(decorator).build().fuse();
+        let drain = slog_async::Async::new(drain).build().fuse();
+        let _out = slog::Logger::root(drain, o!());
+
+        let (tx, rx) = channel::<String>();
+        let (ftx, frx) = channel::<(Vec<String>, String)>();
+
+        let logger = Logger {
+            output: _out,
+            files: BTreeMap::new(),
+            incoming: rx,
+            fincoming: frx,
+
+            // Default.
+            aggregate_log: false,
+        };
+
+        let logger_handle = LoggerHandle {
+            sender: tx,
+            fsender: ftx,
+        };
+
+        (logger_handle, logger)
+    }
+
+    pub fn all_log(&mut self, dir: PathBuf) -> &mut Self
+    {
+        match self.files.get("All") {
+            Some(s) => (),
+            None => {
+                let logger = Logger::create_file_logger("All.txt", dir);
+                self.files.insert(
+                    "All".to_string(),
+                    logger);
+            }
+        }
+
+        self.aggregate_log = true;
+        self
+    }
+
+    fn create_file_logger<'a>(name: &'a str, dir: PathBuf) -> slog::Logger {
         let file = OpenOptions::new()
             .create(true)
             .write(true)
@@ -56,55 +140,18 @@ impl<'a> Context<'a> {
         logger
     }
 
-    pub fn log_info<S: Into<String>>(&self, msg: S) {
-        self.logger.handle.sender
-    }
-}
-
-#[derive(Clone)]
-pub struct LoggerHandle {
-    sender: Sender<String>,
-}
-
-impl LoggerHandle {
-    pub fn log_info<S: Into<String>>(&self, msg: S) {
-        // Don't actually do the logging here, who knows what thread invoked us!
-        self.sender.send(msg.into()).ok();
-    }
-}
-
-pub struct Logger {
-    output: slog::Logger,
-    files: BTreeMap<String, slog::Logger>,
-    incoming: Receiver<String>,
-}
-
-impl Logger {
-    pub fn new() -> (LoggerHandle, Logger) {
-        let decorator = slog_term::TermDecorator::new().build();
-        let drain = slog_term::FullFormat::new(decorator).build().fuse();
-        let drain = slog_async::Async::new(drain).build().fuse();
-        let _out = slog::Logger::root(drain, o!());
-
-        let (tx, rx) = channel::<String>();
-
-        let logger = Logger {
-            output: _out,
-            files: BTreeMap::new(),
-            incoming: rx
-        };
-
-        let logger_handle = LoggerHandle {
-            sender: tx
-        };
-
-        (logger_handle, logger)
-    }
-
     pub fn poll_once(&self) {
         while let Ok(msg) = self.incoming.try_recv() {
             // log for real now, now that we're in the desired thread and environment
             self.log_info(msg);
+        }
+    }
+
+    pub fn poll_files(&self) {
+        while let Ok(msg) = self.fincoming.try_recv() {
+            for file in msg.0 {
+                self.log_info_file(file, &msg.1)
+            }
         }
     }
 
@@ -116,9 +163,17 @@ impl Logger {
     fn log_info<S: Into<String>>(&self, msg: S) -> &Self {
         let _msg = msg.into();
         _info!(self.output, "{}", _msg);
-        _info!(self.files["All"], "{}", _msg);
-
+        if self.aggregate_log
+        {
+            _info!(self.files["All"], "{}", _msg);
+        }
         self
+    }
+
+    fn log_info_file<F: Into<String>, S: Into<String>>(&self, file: F, msg: S) {
+        let _msg = msg.into();
+        let _file = file.into();
+        _info!(self.files[_file.as_str()], "{}", _msg);
     }
 }
 
@@ -127,7 +182,7 @@ pub struct Logging {
     logger: Arc<RwLock<Logger>>
 }
 
-impl<'a> Logging {
+impl Logging {
     pub fn new(logh: LoggerHandle, log: Arc<RwLock<Logger>>) -> Logging {
 
         let logging = Logging {
@@ -150,12 +205,19 @@ impl<'a> Logging {
 
         self
     }
+
+    pub fn log_info_files<S: Into<String>>(&self, files: Vec<String> ,msg: S) -> &Self {
+        self.handle.send_context(files, msg);
+        self.logger.try_read().unwrap().poll_files();
+
+        self
+    }
 }
 
 #[macro_export]
 macro_rules! info {
     ($logging:expr, $($message:tt)*) => {
-        $crate::Logging::log_info($logging, format!($($message)*))
+        $crate::Context::log_info($logging, format!($($message)*))
     }
 }
 
@@ -166,6 +228,12 @@ Arc<RwLock> will allow any number of readers, or one writer at a time.
 Also, only use Rc in a single-threaded context.
 
 Cell, RefCell, and Box should also only be used in a single-threaded context.
+
+If you always are going to clone, accept Arc. If you sometimes clone, pass &Arc. If you only need to read from the value, pass &
+
+
+let (rx, tx) = Mpsc::channel();
+tx.send((Vec::new::<String>(), "".into());
 
 ----------------------------
 

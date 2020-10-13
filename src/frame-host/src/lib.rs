@@ -1,8 +1,13 @@
 pub mod server {
+    use asio_logger;
+    use asio_logger::info;
+    use util;
+
     use std::fs::File;
     use std::io::Write;
     use std::path::PathBuf;
     use std::process::{Child, Command, Stdio};
+    use std::sync::Arc;
 
     pub struct Server {
         pub root: PathBuf,
@@ -15,15 +20,22 @@ pub mod server {
         pub cwd: Option<String>,
 
         pub handle: Option<Child>,
+
+        logger: asio_logger::Context,
     }
 
     impl Server {
         /// Creates a new 'Server' with a root directory and application subdirectories.
         ///
         /// TODO: Full implimentation examples.
-        pub fn new(root: impl Into<PathBuf>) -> Server {
+        pub fn new(logging: Arc<asio_logger::Logging> ,root: impl Into<PathBuf>) -> Server {
             // let raw: &str = &Self::read_cwd_file()[..];
             // let config: serde_json::Value = serde_json::from_str(raw)?;
+
+            let mut logger = asio_logger::Context::new(logging, util::env::get_cwd().unwrap());
+            logger.fsink(util::env::get_cwd().unwrap(), "log-frame-host.txt");
+            info!(&logger, "Initializing frame-host!");
+
 
             let server = Server {
                 // TODO: Trait this for abstraction.
@@ -37,6 +49,8 @@ pub mod server {
                 cwd: None,
 
                 handle: None,
+
+                logger: logger,
             };
 
             assert!(server.root.is_absolute());
