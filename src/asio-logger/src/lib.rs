@@ -2,12 +2,16 @@
 #![allow(unused_imports)]
 #![allow(unused_variables)]
 
+#[doc(hidden)]
+pub use slog;
+
 use slog::debug as _debug;
 use slog::error as _error;
 use slog::info as _info;
 use slog::trace as _trace;
 use slog::warn as _warn;
 
+use slog::Level;
 use slog::{o, Drain};
 use std::collections::BTreeMap;
 use std::fmt::write;
@@ -42,13 +46,12 @@ impl Context {
         self
     }
 
-    pub fn log_msg<S: Into<String>>(&self, level: S, msg: S) -> &Self {
-        let _level = level.into();
+    pub fn log_msg<S: Into<String>>(&self, level: slog::Level, msg: S) -> &Self {
         let _msg = msg.into();
-        self.logger.log_msg(&_level, &_msg);
+        self.logger.log_msg(level, &_msg);
         if !self.files.is_empty() {
             let _files = self.files.clone();
-            self.logger.log_msg_files(_level, _files, _msg);
+            self.logger.log_msg_files(level, _files, _msg);
         }
         self
     }
@@ -56,26 +59,26 @@ impl Context {
 
 #[derive(Clone)]
 pub struct LoggerHandle {
-    sender: Sender<(String, String)>,
-    fsender: Sender<(String, Vec<String>, String)>,
+    sender: Sender<(slog::Level, String)>,
+    fsender: Sender<(slog::Level, Vec<String>, String)>,
 }
 
 impl LoggerHandle {
-    pub fn log_msg<S: Into<String>>(&self, level: S, msg: S) {
+    pub fn log_msg<S: Into<String>>(&self, level: slog::Level, msg: S) {
         // Don't actually do the logging here, who knows what thread invoked us!
-        self.sender.send((level.into(), msg.into())).ok();
+        self.sender.send((level, msg.into())).ok();
     }
 
-    pub fn send_context<S: Into<String>>(&self, level: S, files: Vec<String>, msg: S) {
-        self.fsender.send((level.into(), files, msg.into())).ok();
+    pub fn send_context<S: Into<String>>(&self, level: slog::Level, files: Vec<String>, msg: S) {
+        self.fsender.send((level, files, msg.into())).ok();
     }
 }
 
 pub struct Slog_Manager {
     output: slog::Logger,
     files: BTreeMap<String, slog::Logger>,
-    incoming: Receiver<(String, String)>,
-    fincoming: Receiver<(String, Vec<String>, String)>,
+    incoming: Receiver<(slog::Level, String)>,
+    fincoming: Receiver<(slog::Level, Vec<String>, String)>,
 
     aggregate_log: bool,
 }
@@ -87,8 +90,8 @@ impl Slog_Manager {
         let drain = slog_async::Async::new(drain).build().fuse();
         let _out = slog::Logger::root(drain, o!());
 
-        let (tx, rx) = channel::<(String, String)>();
-        let (ftx, frx) = channel::<(String, Vec<String>, String)>();
+        let (tx, rx) = channel::<(slog::Level, String)>();
+        let (ftx, frx) = channel::<(slog::Level, Vec<String>, String)>();
 
         let logger = Slog_Manager {
             output: _out,
@@ -138,7 +141,7 @@ impl Slog_Manager {
     }
 
     pub fn poll_once(&self) {
-        while let Ok((msg)) = self.incoming.try_recv() {
+        while let Ok(msg) = self.incoming.try_recv() {
             // log for real now, now that we're in the desired thread and environment
             self.log_msg(msg.0, msg.1);
         }
@@ -147,7 +150,7 @@ impl Slog_Manager {
     pub fn poll_files(&self) {
         while let Ok(msg) = self.fincoming.try_recv() {
             for file in msg.1 {
-                self.log_msg_file(&msg.0, &file, &msg.2)
+                self.log_msg_file(msg.0, &file, &msg.2)
             }
         }
     }
@@ -157,38 +160,35 @@ impl Slog_Manager {
         self
     }
 
-    fn log_msg<S: Into<String>>(&self, level: S, msg: S) -> &Self {
-        let _level = level.into();
-        let __level = _level.as_str();
-
+    fn log_msg<S: Into<String>>(&self, level: slog::Level, msg: S) -> &Self {
         let _msg = msg.into();
 
-        match __level {
-            "error" => {
+        match level {
+            slog::Level::Error => {
                 _error!(self.output, "{}", _msg);
                 if self.aggregate_log {
                     _error!(self.files["All"], "{}", _msg);
                 }
             }
-            "warn" => {
+            slog::Level::Warning => {
                 _warn!(self.output, "{}", _msg);
                 if self.aggregate_log {
                     _warn!(self.files["All"], "{}", _msg);
                 }
             }
-            "info" => {
+            slog::Level::Info => {
                 _info!(self.output, "{}", _msg);
                 if self.aggregate_log {
                     _info!(self.files["All"], "{}", _msg);
                 }
             }
-            "debug" => {
+            slog::Level::Debug => {
                 _debug!(self.output, "{}", _msg);
                 if self.aggregate_log {
                     _debug!(self.files["All"], "{}", _msg);
                 }
             }
-            "trace" => {
+            slog::Level::Trace => {
                 _trace!(self.output, "{}", _msg);
                 if self.aggregate_log {
                     _trace!(self.files["All"], "{}", _msg);
@@ -200,26 +200,24 @@ impl Slog_Manager {
         self
     }
 
-    fn log_msg_file<S: Into<String>>(&self, level: S, file: S, msg: S) {
-        let _level = level.into();
-        let __level = _level.as_str();
+    fn log_msg_file<S: Into<String>>(&self, level: slog::Level, file: S, msg: S) {
         let _msg = msg.into();
         let _file = file.into();
 
-        match __level {
-            "error" => {
+        match level {
+            slog::Level::Error => {
                 _error!(self.files[_file.as_str()], "{}", _msg);
             }
-            "warn" => {
+            slog::Level::Warning => {
                 _warn!(self.files[_file.as_str()], "{}", _msg);
             }
-            "info" => {
+            slog::Level::Info => {
                 _info!(self.files[_file.as_str()], "{}", _msg);
             }
-            "debug" => {
+            slog::Level::Debug => {
                 _debug!(self.files[_file.as_str()], "{}", _msg);
             }
-            "trace" => {
+            slog::Level::Trace => {
                 _trace!(self.files[_file.as_str()], "{}", _msg);
             }
             _ => ()
@@ -248,14 +246,14 @@ impl Logger {
         self
     }
 
-    pub fn log_msg<S: Into<String>>(&self, level: S, msg: S) -> &Self {
-        self.handle.log_msg(level.into(), msg.into());
+    pub fn log_msg<S: Into<String>>(&self, level: slog::Level, msg: S) -> &Self {
+        self.handle.log_msg(level, msg.into());
         self.logger.try_read().unwrap().poll_once();
 
         self
     }
 
-    pub fn log_msg_files<S: Into<String>>(&self, level: S, files: Vec<String>, msg: S) -> &Self {
+    pub fn log_msg_files<S: Into<String>>(&self, level: slog::Level, files: Vec<String>, msg: S) -> &Self {
         self.handle.send_context(level.into(), files, msg.into());
         self.logger.try_read().unwrap().poll_files();
 
@@ -266,35 +264,35 @@ impl Logger {
 #[macro_export]
 macro_rules! error {
     ($logging:expr, $($message:tt)*) => {
-        $crate::Context::log_msg($logging, "error", format!($($message)*))
+        $crate::Context::log_msg($logging, $crate::slog::Level::Error, format!($($message)*))
     }
 }
 
 #[macro_export]
 macro_rules! warn {
     ($logging:expr, $($message:tt)*) => {
-        $crate::Context::log_msg($logging, "warn", format!($($message)*))
+        $crate::Context::log_msg($logging, $crate::slog::Level::Warning, format!($($message)*))
     }
 }
 
 #[macro_export]
 macro_rules! info {
     ($logging:expr, $($message:tt)*) => {
-        $crate::Context::log_msg($logging, "info", format!($($message)*))
+        $crate::Context::log_msg($logging, $crate::slog::Level::Info, format!($($message)*))
     }
 }
 
 #[macro_export]
 macro_rules! debug {
     ($logging:expr, $($message:tt)*) => {
-        $crate::Context::log_msg($logging, "debug", format!($($message)*))
+        $crate::Context::log_msg($logging, $crate::slog::Level::Debug, format!($($message)*))
     }
 }
 
 #[macro_export]
 macro_rules! trace {
     ($logging:expr, $($message:tt)*) => {
-        $crate::Context::log_msg($logging, "trace", format!($($message)*))
+        $crate::Context::log_msg($logging, $crate::slog::Level::Trace, format!($($message)*))
     }
 }
 
