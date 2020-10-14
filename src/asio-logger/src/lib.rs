@@ -12,20 +12,20 @@ use slog::{o, Drain};
 use std::collections::BTreeMap;
 use std::fmt::write;
 use std::fs::OpenOptions;
-use std::path::PathBuf;
-use std::sync::mpsc::{Receiver, Sender, channel};
-use std::sync::RwLock;
 use std::ops::DerefMut;
+use std::path::PathBuf;
+use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Arc;
+use std::sync::RwLock;
 
 pub struct Context {
-    logger: Arc<Logging>,
+    logger: Arc<Logger>,
     files: Vec<String>,
 }
 
 impl Context {
-    pub fn new(logger: Arc<Logging>, dir: impl Into<PathBuf>) -> Self {
-        let context = Context { 
+    pub fn new(logger: Arc<Logger>, dir: impl Into<PathBuf>) -> Self {
+        let context = Context {
             logger: logger,
             files: Vec::new(),
         };
@@ -33,22 +33,22 @@ impl Context {
         context
     }
 
-    pub fn fsink(&mut self, dir: impl Into<PathBuf>, name: impl Into<String>) -> &mut Self {
+    pub fn file(&mut self, dir: impl Into<PathBuf>, name: impl Into<String>) -> &mut Self {
         let _dir = dir.into();
         let _name = name.into();
-        let _log = Logger::create_file_logger(_name.as_str(), _dir);
+        let _log = Slog_Manager::create_file_logger(_name.as_str(), _dir);
         self.logger.add_context(&_name, _log);
         self.files.insert(self.files.len(), _name);
         self
     }
 
-    pub fn log_info<S: Into<String>>(&self, msg: S) -> &Self {
+    pub fn log_msg<S: Into<String>>(&self, level: S, msg: S) -> &Self {
+        let _level = level.into();
         let _msg = msg.into();
-        self.logger.log_info(&_msg);
-        if !self.files.is_empty()
-        {
+        self.logger.log_msg(&_level, &_msg);
+        if !self.files.is_empty() {
             let _files = self.files.clone();
-            self.logger.log_info_files(_files, _msg);
+            self.logger.log_msg_files(_level, _files, _msg);
         }
         self
     }
@@ -56,41 +56,41 @@ impl Context {
 
 #[derive(Clone)]
 pub struct LoggerHandle {
-    sender: Sender<String>,
-    fsender: Sender<(Vec<String>, String)>,
+    sender: Sender<(String, String)>,
+    fsender: Sender<(String, Vec<String>, String)>,
 }
 
 impl LoggerHandle {
-    pub fn log_info<S: Into<String>>(&self, msg: S) {
+    pub fn log_msg<S: Into<String>>(&self, level: S, msg: S) {
         // Don't actually do the logging here, who knows what thread invoked us!
-        self.sender.send(msg.into()).ok();
+        self.sender.send((level.into(), msg.into())).ok();
     }
 
-    pub fn send_context<S: Into<String>>(&self, files: Vec<String>, msg: S) {
-        self.fsender.send((files, msg.into())).ok();
+    pub fn send_context<S: Into<String>>(&self, level: S, files: Vec<String>, msg: S) {
+        self.fsender.send((level.into(), files, msg.into())).ok();
     }
 }
 
-pub struct Logger {
+pub struct Slog_Manager {
     output: slog::Logger,
     files: BTreeMap<String, slog::Logger>,
-    incoming: Receiver<String>,
-    fincoming: Receiver<(Vec<String>, String)>,
+    incoming: Receiver<(String, String)>,
+    fincoming: Receiver<(String, Vec<String>, String)>,
 
     aggregate_log: bool,
 }
 
-impl Logger {
-    pub fn new() -> (LoggerHandle, Logger) {
+impl Slog_Manager {
+    pub fn new() -> (LoggerHandle, Slog_Manager) {
         let decorator = slog_term::TermDecorator::new().build();
         let drain = slog_term::FullFormat::new(decorator).build().fuse();
         let drain = slog_async::Async::new(drain).build().fuse();
         let _out = slog::Logger::root(drain, o!());
 
-        let (tx, rx) = channel::<String>();
-        let (ftx, frx) = channel::<(Vec<String>, String)>();
+        let (tx, rx) = channel::<(String, String)>();
+        let (ftx, frx) = channel::<(String, Vec<String>, String)>();
 
-        let logger = Logger {
+        let logger = Slog_Manager {
             output: _out,
             files: BTreeMap::new(),
             incoming: rx,
@@ -108,15 +108,12 @@ impl Logger {
         (logger_handle, logger)
     }
 
-    pub fn all_log(&mut self, dir: PathBuf) -> &mut Self
-    {
+    pub fn all_log(&mut self, dir: PathBuf) -> &mut Self {
         match self.files.get("All") {
             Some(s) => (),
             None => {
-                let logger = Logger::create_file_logger("All.txt", dir);
-                self.files.insert(
-                    "All".to_string(),
-                    logger);
+                let logger = Slog_Manager::create_file_logger("All.txt", dir);
+                self.files.insert("All".to_string(), logger);
             }
         }
 
@@ -141,16 +138,16 @@ impl Logger {
     }
 
     pub fn poll_once(&self) {
-        while let Ok(msg) = self.incoming.try_recv() {
+        while let Ok((msg)) = self.incoming.try_recv() {
             // log for real now, now that we're in the desired thread and environment
-            self.log_info(msg);
+            self.log_msg(msg.0, msg.1);
         }
     }
 
     pub fn poll_files(&self) {
         while let Ok(msg) = self.fincoming.try_recv() {
-            for file in msg.0 {
-                self.log_info_file(file, &msg.1)
+            for file in msg.1 {
+                self.log_msg_file(&msg.0, &file, &msg.2)
             }
         }
     }
@@ -160,34 +157,86 @@ impl Logger {
         self
     }
 
-    fn log_info<S: Into<String>>(&self, msg: S) -> &Self {
+    fn log_msg<S: Into<String>>(&self, level: S, msg: S) -> &Self {
+        let _level = level.into();
+        let __level = _level.as_str();
+
         let _msg = msg.into();
-        _info!(self.output, "{}", _msg);
-        if self.aggregate_log
-        {
-            _info!(self.files["All"], "{}", _msg);
+
+        match __level {
+            "error" => {
+                _error!(self.output, "{}", _msg);
+                if self.aggregate_log {
+                    _error!(self.files["All"], "{}", _msg);
+                }
+            }
+            "warn" => {
+                _warn!(self.output, "{}", _msg);
+                if self.aggregate_log {
+                    _warn!(self.files["All"], "{}", _msg);
+                }
+            }
+            "info" => {
+                _info!(self.output, "{}", _msg);
+                if self.aggregate_log {
+                    _info!(self.files["All"], "{}", _msg);
+                }
+            }
+            "debug" => {
+                _debug!(self.output, "{}", _msg);
+                if self.aggregate_log {
+                    _debug!(self.files["All"], "{}", _msg);
+                }
+            }
+            "trace" => {
+                _trace!(self.output, "{}", _msg);
+                if self.aggregate_log {
+                    _trace!(self.files["All"], "{}", _msg);
+                }
+            }
+            _ => ()
         }
+
         self
     }
 
-    fn log_info_file<F: Into<String>, S: Into<String>>(&self, file: F, msg: S) {
+    fn log_msg_file<S: Into<String>>(&self, level: S, file: S, msg: S) {
+        let _level = level.into();
+        let __level = _level.as_str();
         let _msg = msg.into();
         let _file = file.into();
-        _info!(self.files[_file.as_str()], "{}", _msg);
+
+        match __level {
+            "error" => {
+                _error!(self.files[_file.as_str()], "{}", _msg);
+            }
+            "warn" => {
+                _warn!(self.files[_file.as_str()], "{}", _msg);
+            }
+            "info" => {
+                _info!(self.files[_file.as_str()], "{}", _msg);
+            }
+            "debug" => {
+                _debug!(self.files[_file.as_str()], "{}", _msg);
+            }
+            "trace" => {
+                _trace!(self.files[_file.as_str()], "{}", _msg);
+            }
+            _ => ()
+        }
     }
 }
 
-pub struct Logging {
+pub struct Logger {
     handle: LoggerHandle,
-    logger: Arc<RwLock<Logger>>
+    logger: Arc<RwLock<Slog_Manager>>,
 }
 
-impl Logging {
-    pub fn new(logh: LoggerHandle, log: Arc<RwLock<Logger>>) -> Logging {
-
-        let logging = Logging {
+impl Logger {
+    pub fn new(logh: LoggerHandle, log: Arc<RwLock<Slog_Manager>>) -> Logger {
+        let logging = Logger {
             handle: logh,
-            logger: log
+            logger: log,
         };
 
         logging
@@ -199,15 +248,15 @@ impl Logging {
         self
     }
 
-    pub fn log_info<S: Into<String>>(&self, msg: S) -> &Self {
-        self.handle.log_info(msg);
+    pub fn log_msg<S: Into<String>>(&self, level: S, msg: S) -> &Self {
+        self.handle.log_msg(level.into(), msg.into());
         self.logger.try_read().unwrap().poll_once();
 
         self
     }
 
-    pub fn log_info_files<S: Into<String>>(&self, files: Vec<String> ,msg: S) -> &Self {
-        self.handle.send_context(files, msg);
+    pub fn log_msg_files<S: Into<String>>(&self, level: S, files: Vec<String>, msg: S) -> &Self {
+        self.handle.send_context(level.into(), files, msg.into());
         self.logger.try_read().unwrap().poll_files();
 
         self
@@ -215,9 +264,37 @@ impl Logging {
 }
 
 #[macro_export]
+macro_rules! error {
+    ($logging:expr, $($message:tt)*) => {
+        $crate::Context::log_msg($logging, "error", format!($($message)*))
+    }
+}
+
+#[macro_export]
+macro_rules! warn {
+    ($logging:expr, $($message:tt)*) => {
+        $crate::Context::log_msg($logging, "warn", format!($($message)*))
+    }
+}
+
+#[macro_export]
 macro_rules! info {
     ($logging:expr, $($message:tt)*) => {
-        $crate::Context::log_info($logging, format!($($message)*))
+        $crate::Context::log_msg($logging, "info", format!($($message)*))
+    }
+}
+
+#[macro_export]
+macro_rules! debug {
+    ($logging:expr, $($message:tt)*) => {
+        $crate::Context::log_msg($logging, "debug", format!($($message)*))
+    }
+}
+
+#[macro_export]
+macro_rules! trace {
+    ($logging:expr, $($message:tt)*) => {
+        $crate::Context::log_msg($logging, "trace", format!($($message)*))
     }
 }
 

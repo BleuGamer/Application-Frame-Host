@@ -17,10 +17,10 @@ use std::io;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use std::process::Child;
+use std::sync::Arc;
+use std::sync::RwLock;
 use std::thread;
 use std::time::Duration;
-use std::sync::RwLock;
-use std::sync::Arc;
 
 use crossbeam_channel::{bounded, select, tick, Receiver};
 
@@ -28,13 +28,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ctrl_c_events = ctrl_channel()?;
     let ticks = tick(Duration::from_secs(1));
 
-    let (lhandle, mut slogger) = asio_logger::Logger::new();
+    let (lhandle, mut slogger) = asio_logger::Slog_Manager::new();
     slogger.all_log(util::env::get_cwd().unwrap());
     let _locked_logger = Arc::new(RwLock::new(slogger));
-    let _logger = Arc::new(asio_logger::Logging::new(lhandle, _locked_logger));
-    let logger = Arc::new(asio_logger::Context::new(Arc::clone(&_logger), util::env::get_cwd().unwrap()));
+    let _logger = Arc::new(asio_logger::Logger::new(lhandle, _locked_logger));
+    let logger = Arc::new(asio_logger::Context::new(
+        Arc::clone(&_logger),
+        util::env::get_cwd().unwrap(),
+    ));
 
-    logger.log_info("STARTING SERVER");
+    //logger.log_msg("STARTING SERVER");
 
     let server_details = &mut util::parser::ServerDetails::default();
     util::parser::read_contents("factorio.json", server_details).unwrap();
