@@ -28,11 +28,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ctrl_c_events = ctrl_channel()?;
     let ticks = tick(Duration::from_secs(1));
 
-    let (lhandle, mut slogger) = asio_logger::SlogManager::new();
+    let (lhandle, mut slogger) = asio_logger::context::SlogManager::new();
     slogger.all_log(util::env::get_cwd().unwrap());
     let _locked_logger = Arc::new(RwLock::new(slogger));
-    let _logger = Arc::new(asio_logger::Logger::new(lhandle, _locked_logger));
-    let logger = Arc::new(asio_logger::Context::new(
+    let _logger = Arc::new(asio_logger::context::Logger::new(lhandle, _locked_logger));
+    let logger = Arc::new(asio_logger::context::Context::new(
         Arc::clone(&_logger),
         util::env::get_cwd().unwrap(),
     ));

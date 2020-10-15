@@ -12,7 +12,7 @@ asio-logger = { path = "../asio-logger" }
 util = { path = "../util" }
 
 actix = "0.10.0"
-actix-web = "3.0.2"
+actix-web = "3.1.0"
 actix-web-actors = "3.0.0"
 actix-files = "0.3.0"
 actix-session = "0.4.0"

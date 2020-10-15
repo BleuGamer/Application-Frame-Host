@@ -21,18 +21,18 @@ pub mod server {
 
         pub handle: Option<Child>,
 
-        logger: asio_logger::Context,
+        logger: asio_logger::context::Context,
     }
 
     impl Server {
         /// Creates a new 'Server' with a root directory and application subdirectories.
         ///
         /// TODO: Full implimentation examples.
-        pub fn new(logging: Arc<asio_logger::Logger>, root: impl Into<PathBuf>) -> Server {
+        pub fn new(logging: Arc<asio_logger::context::Logger>, root: impl Into<PathBuf>) -> Server {
             // let raw: &str = &Self::read_cwd_file()[..];
             // let config: serde_json::Value = serde_json::from_str(raw)?;
 
-            let mut logger = asio_logger::Context::new(logging, util::env::get_cwd().unwrap());
+            let mut logger = asio_logger::context::Context::new(logging, util::env::get_cwd().unwrap());
             logger.file(util::env::get_cwd().unwrap(), "log-frame-host.txt");
             info!(&logger, "Initializing frame-host!");
 
