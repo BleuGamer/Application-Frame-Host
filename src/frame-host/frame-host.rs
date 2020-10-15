@@ -1,6 +1,6 @@
 pub mod server {
     use asio_logger;
-    use asio_logger::info;
+    use asio_logger::{info, error};
     use util;
 
     use std::fs::File;
@@ -118,7 +118,7 @@ pub mod server {
                 .write_all("/quit".as_bytes())
             {
                 Ok(_n) => {}
-                Err(_error) => println!("Server is not running."),
+                Err(_error) => error!(&self.logger, "Server is not running."),
             }
 
             self

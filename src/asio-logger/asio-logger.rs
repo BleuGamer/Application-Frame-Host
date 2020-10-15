@@ -46,14 +46,13 @@ impl Context {
         self
     }
 
-    pub fn log_msg<S: Into<String>>(&self, level: slog::Level, msg: S) -> &Self {
+    pub fn log_msg<S: Into<String>>(&self, level: slog::Level, msg: S) {
         let _msg = msg.into();
         self.logger.log_msg(level, &_msg);
         if !self.files.is_empty() {
             let _files = self.files.clone();
             self.logger.log_msg_files(level, _files, _msg);
         }
-        self
     }
 }
 

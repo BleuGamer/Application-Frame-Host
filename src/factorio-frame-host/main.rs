@@ -83,7 +83,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Temporary testing.
         // TODO: Proper Actix Async handling.
         web_api::start();
-        web_api::StartWebSocket();
+        web_api::start_web_socket();
     });
 
     loop {
