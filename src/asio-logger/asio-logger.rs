@@ -40,7 +40,7 @@ impl Context {
     pub fn file(&mut self, dir: impl Into<PathBuf>, name: impl Into<String>) -> &mut Self {
         let _dir = dir.into();
         let _name = name.into();
-        let _log = Slog_Manager::create_file_logger(_name.as_str(), _dir);
+        let _log = SlogManager::create_file_logger(_name.as_str(), _dir);
         self.logger.add_context(&_name, _log);
         self.files.insert(self.files.len(), _name);
         self
@@ -73,7 +73,7 @@ impl LoggerHandle {
     }
 }
 
-pub struct Slog_Manager {
+pub struct SlogManager {
     output: slog::Logger,
     files: BTreeMap<String, slog::Logger>,
     incoming: Receiver<(slog::Level, String)>,
@@ -82,8 +82,8 @@ pub struct Slog_Manager {
     aggregate_log: bool,
 }
 
-impl Slog_Manager {
-    pub fn new() -> (LoggerHandle, Slog_Manager) {
+impl SlogManager {
+    pub fn new() -> (LoggerHandle, SlogManager) {
         let decorator = slog_term::TermDecorator::new().build();
         let drain = slog_term::FullFormat::new(decorator).build().fuse();
         let drain = slog_async::Async::new(drain).build().fuse();
@@ -92,7 +92,7 @@ impl Slog_Manager {
         let (tx, rx) = channel::<(slog::Level, String)>();
         let (ftx, frx) = channel::<(slog::Level, Vec<String>, String)>();
 
-        let logger = Slog_Manager {
+        let logger = SlogManager {
             output: _out,
             files: BTreeMap::new(),
             incoming: rx,
@@ -114,7 +114,7 @@ impl Slog_Manager {
         match self.files.get("All") {
             Some(s) => (),
             None => {
-                let logger = Slog_Manager::create_file_logger("All.txt", dir);
+                let logger = SlogManager::create_file_logger("All.txt", dir);
                 self.files.insert("All".to_string(), logger);
             }
         }
@@ -232,11 +232,11 @@ impl Slog_Manager {
 
 pub struct Logger {
     handle: LoggerHandle,
-    logger: Arc<RwLock<Slog_Manager>>,
+    logger: Arc<RwLock<SlogManager>>,
 }
 
 impl Logger {
-    pub fn new(logh: LoggerHandle, log: Arc<RwLock<Slog_Manager>>) -> Logger {
+    pub fn new(logh: LoggerHandle, log: Arc<RwLock<SlogManager>>) -> Logger {
         let logging = Logger {
             handle: logh,
             logger: log,

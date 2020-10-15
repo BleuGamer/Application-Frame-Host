@@ -28,7 +28,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ctrl_c_events = ctrl_channel()?;
     let ticks = tick(Duration::from_secs(1));
 
-    let (lhandle, mut slogger) = asio_logger::Slog_Manager::new();
+    let (lhandle, mut slogger) = asio_logger::SlogManager::new();
     slogger.all_log(util::env::get_cwd().unwrap());
     let _locked_logger = Arc::new(RwLock::new(slogger));
     let _logger = Arc::new(asio_logger::Logger::new(lhandle, _locked_logger));
@@ -82,8 +82,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // This is unsafe.
         // Temporary testing.
         // TODO: Proper Actix Async handling.
-        web_api::start();
-        web_api::start_web_socket();
+        let waw = web_api::start();
+        let was = web_api::start_web_socket();
     });
 
     loop {
