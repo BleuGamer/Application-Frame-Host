@@ -5,6 +5,9 @@ version = "0.1.0"
 authors = ["Lance Wallis <bleudeveloper@gmail.com>"]
 edition = "2018"
 
+[lib]
+path = "util.rs"
+
 [dependencies]
 serde = {version = "1.0", features = ["derive"]}
 serde_json = "1.0"

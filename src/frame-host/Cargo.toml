@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["Lance Wallis <bleudeveloper@gmail.com>"]
 edition = "2018"
 
+[lib]
+path = "frame-host.rs"
+
 [dependencies]
 asio-logger = { path = "../asio-logger" }
 util = { path = "../util" }
