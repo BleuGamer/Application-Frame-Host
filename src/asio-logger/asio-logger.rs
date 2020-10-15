@@ -156,7 +156,13 @@ impl Slog_Manager {
     }
 
     fn context(&mut self, name: impl Into<String>, log: slog::Logger) -> &mut Self {
-        self.files.insert(name.into(), log);
+        let _name = name.into();
+        match self.files.get(_name.as_str()) {
+            Some(s) => (),
+            None => {
+                self.files.insert(_name, log);
+            }
+        }
         self
     }
 
