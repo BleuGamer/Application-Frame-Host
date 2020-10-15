@@ -111,11 +111,11 @@ impl SlogManager {
     }
 
     pub fn all_log(&mut self, dir: PathBuf) -> &mut Self {
-        match self.files.get("All") {
+        match self.files.get("log_all.txt") {
             Some(s) => (),
             None => {
                 let logger = SlogManager::create_file_logger("All.txt", dir);
-                self.files.insert("All".to_string(), logger);
+                self.files.insert("log_all.txt".to_string(), logger);
             }
         }
 
@@ -172,31 +172,31 @@ impl SlogManager {
             slog::Level::Error => {
                 _error!(self.output, "{}", _msg);
                 if self.aggregate_log {
-                    _error!(self.files["All"], "{}", _msg);
+                    _error!(self.files["log_all.txt"], "{}", _msg);
                 }
             }
             slog::Level::Warning => {
                 _warn!(self.output, "{}", _msg);
                 if self.aggregate_log {
-                    _warn!(self.files["All"], "{}", _msg);
+                    _warn!(self.files["log_all.txt"], "{}", _msg);
                 }
             }
             slog::Level::Info => {
                 _info!(self.output, "{}", _msg);
                 if self.aggregate_log {
-                    _info!(self.files["All"], "{}", _msg);
+                    _info!(self.files["log_all.txt"], "{}", _msg);
                 }
             }
             slog::Level::Debug => {
                 _debug!(self.output, "{}", _msg);
                 if self.aggregate_log {
-                    _debug!(self.files["All"], "{}", _msg);
+                    _debug!(self.files["log_all.txt"], "{}", _msg);
                 }
             }
             slog::Level::Trace => {
                 _trace!(self.output, "{}", _msg);
                 if self.aggregate_log {
-                    _trace!(self.files["All"], "{}", _msg);
+                    _trace!(self.files["log_all.txt"], "{}", _msg);
                 }
             }
             _ => ()
@@ -369,7 +369,7 @@ impl Logger {
 
         let log = Logger::create_file_logger("All.txt", dir.into());
 
-        logger.files.insert("All", log);
+        logger.files.insert("log_all.txt", log);
 
         logger
     }
@@ -405,7 +405,7 @@ impl Logger {
     pub fn log_error<S: Into<String>>(&self, msg: S) -> &Self {
         let _msg = msg.into();
         _error!(self.output, "{}", _msg);
-        _error!(self.files["All"], "{}", _msg);
+        _error!(self.files["log_all.txt"], "{}", _msg);
 
         self
     }
@@ -413,7 +413,7 @@ impl Logger {
     pub fn log_warn<S: Into<String>>(&self, msg: S) -> &Self {
         let _msg = msg.into();
         _warn!(self.output, "{}", _msg);
-        _warn!(self.files["All"], "{}", _msg);
+        _warn!(self.files["log_all.txt"], "{}", _msg);
 
         self
     }
@@ -421,7 +421,7 @@ impl Logger {
     pub fn log_info<S: Into<String>>(&self, msg: S) -> &Self {
         let _msg = msg.into();
         _info!(self.output, "{}", _msg);
-        _info!(self.files["All"], "{}", _msg);
+        _info!(self.files["log_all.txt"], "{}", _msg);
 
         self
     }
@@ -429,7 +429,7 @@ impl Logger {
     pub fn log_debug<S: Into<String>>(&self, msg: S) -> &Self {
         let _msg = msg.into();
         _debug!(self.output, "{}", _msg);
-        _debug!(self.files["All"], "{}", _msg);
+        _debug!(self.files["log_all.txt"], "{}", _msg);
 
         self
     }
@@ -437,7 +437,7 @@ impl Logger {
     pub fn log_trace<S: Into<String>>(&self, msg: S) -> &Self {
         let _msg = msg.into();
         _trace!(self.output, "{}", _msg);
-        _trace!(self.files["All"], "{}", _msg);
+        _trace!(self.files["log_all.txt"], "{}", _msg);
 
         self
     }
