@@ -15,6 +15,10 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use std::sync::Arc;
 use std::sync::RwLock;
 
+
+
+
+/*
 pub struct Context {
     logger: Arc<Logger>,
     files: Vec<String>,
@@ -37,6 +41,47 @@ impl Context {
         self.logger.add_context(&_name, _log);
         self.files.insert(self.files.len(), _name);
         self
+    }
+
+    pub fn slogger(self, dir: impl Into<PathBuf>, name: impl Into<String>, slogger: slog::Logger) -> Context {
+        let _dir = dir.into();
+        let _name = name.into();
+        let _log = SlogManager::create_explicit_logger(_name.as_str(), _dir, slogger);
+        self.logger.add_context(&_name, _log);
+        let mut _files = self.files;
+        _files.insert(_files.len(), _name);
+        
+        Context {
+            logger: self.logger,
+            files: _files,
+        }
+    }
+
+    pub fn get<T: Into<String>>(&self, slogger: T) -> &slog::Logger
+    {
+        let slogger = self.logger.get_context(slogger.into());
+        slogger
+    }
+
+    pub fn ref_slogger(&self, dir: impl Into<PathBuf>, name: impl Into<String>, slogger: slog::Logger) -> Context {
+        let _dir = dir.into();
+        let _name = name.into();
+        let _log = SlogManager::create_explicit_logger(_name.as_str(), _dir, slogger);
+        self.logger.add_context(&_name, _log);
+        let mut _files = self.files.to_owned();
+        _files.insert(self.files.len(), _name);
+        
+        Context {
+            logger: self.logger.to_owned(),
+            files: _files.to_owned(),
+        }
+    }
+
+    pub fn to_owned(&mut self) -> Context {
+        Context {
+            logger: self.logger.to_owned(),
+            files: self.files.to_owned(),
+        }
     }
 
     pub fn log_msg<S: Into<String>>(&self, level: slog::Level, msg: S) {
@@ -128,6 +173,23 @@ impl SlogManager {
         let drain = slog_term::FullFormat::new(decorator).build().fuse();
         let drain = slog_async::Async::new(drain).build().fuse();
         let logger = slog::Logger::root(drain, o!());
+
+        logger
+    }
+
+    fn create_explicit_logger<'a>(name: &'a str, dir: PathBuf, slogger: slog::Logger) -> slog::Logger {
+        let file = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(dir.join(&name))
+            .unwrap();
+        
+
+        let decorator = slog_term::PlainDecorator::new(file);
+        let drain = slog_term::FullFormat::new(decorator).build().fuse();
+        let drain = slog_async::Async::new(drain).build().fuse();
+        let logger = slog::Logger::root(drain, o!(slogger.list().to_owned()));
 
         logger
     }
@@ -244,6 +306,11 @@ impl Logger {
         self
     }
 
+    pub fn get_context(&self, name: impl Into<String>) -> &slog::Logger {
+        let slogger = self.logger.try_read().unwrap().files.get(&name.into()).unwrap();
+        slogger
+    }
+
     pub fn log_msg<S: Into<String>>(&self, level: slog::Level, msg: S) -> &Self {
         self.handle.log_msg(level, msg.into());
         self.logger.try_read().unwrap().poll_once();
@@ -258,6 +325,10 @@ impl Logger {
         self
     }
 }
+
+*/
+
+/*
 
 #[macro_export]
 macro_rules! error {
@@ -293,6 +364,8 @@ macro_rules! trace {
         $crate::context::Context::log_msg($logging, $crate::slog::Level::Trace, format!($($message)*))
     }
 }
+
+*/
 
 /*
 // This is something to play with later for greater control.

@@ -1,5 +1,4 @@
 pub mod server {
-    use asio_logger;
     use asio_logger::{info, error};
     use util;
 
