@@ -1,9 +1,519 @@
-// For development.
+//  {{{ Crate docs
+//! 
+//  }}}
+
+// {{{ Imports & meta.
+// For Development.
 #![allow(unused_imports)]
 #![allow(unused_variables)]
 
-#[doc(hidden)]
-pub use slog;
+#![warn(missing_docs)]
 
-pub mod context;
-pub mod actix_logger;
+#[macro_use]
+extern crate slog;
+extern crate crossbeam_channel;
+extern crate take_mut;
+extern crate thread_local;
+
+
+use slog::debug as _debug;
+use slog::error as _error;
+use slog::info as _info;
+use slog::trace as _trace;
+use slog::warn as _warn;
+
+use slog::{
+    Drain,
+    Key,
+    KV,
+    SingleKV,
+    Serializer,
+};
+
+use take_mut::take;
+
+#[macro_use]
+extern crate std;
+
+use std::boxed::Box;
+use std::panic::{RefUnwindSafe, UnwindSafe};
+use std::rc::Rc;
+use std::string::String;
+use std::sync::Arc;
+use std::fmt;
+use std::result;
+use std::error::Error;
+// }}}
+
+// {{{ Serializer
+struct ToSendSerializer {
+    kv: Box<dyn KV + Send>,
+}
+
+impl ToSendSerializer {
+    fn new() -> Self {
+        ToSendSerializer { kv: Box::new(()) }
+    }
+
+    fn finish(self) -> Box<dyn KV + Send> {
+        self.kv
+    }
+}
+
+impl Serializer for ToSendSerializer {
+    fn emit_bool(&mut self, key: Key, val: bool) -> slog::Result {
+        take(&mut self.kv, |kv| Box::new((kv, SingleKV(key, val))));
+        Ok(())
+    }
+    fn emit_unit(&mut self, key: Key) -> slog::Result {
+        take(&mut self.kv, |kv| Box::new((kv, SingleKV(key, ()))));
+        Ok(())
+    }
+    fn emit_none(&mut self, key: Key) -> slog::Result {
+        let val: Option<()> = None;
+        take(&mut self.kv, |kv| Box::new((kv, SingleKV(key, val))));
+        Ok(())
+    }
+    fn emit_char(&mut self, key: Key, val: char) -> slog::Result {
+        take(&mut self.kv, |kv| Box::new((kv, SingleKV(key, val))));
+        Ok(())
+    }
+    fn emit_u8(&mut self, key: Key, val: u8) -> slog::Result {
+        take(&mut self.kv, |kv| Box::new((kv, SingleKV(key, val))));
+        Ok(())
+    }
+    fn emit_i8(&mut self, key: Key, val: i8) -> slog::Result {
+        take(&mut self.kv, |kv| Box::new((kv, SingleKV(key, val))));
+        Ok(())
+    }
+    fn emit_u16(&mut self, key: Key, val: u16) -> slog::Result {
+        take(&mut self.kv, |kv| Box::new((kv, SingleKV(key, val))));
+        Ok(())
+    }
+    fn emit_i16(&mut self, key: Key, val: i16) -> slog::Result {
+        take(&mut self.kv, |kv| Box::new((kv, SingleKV(key, val))));
+        Ok(())
+    }
+    fn emit_u32(&mut self, key: Key, val: u32) -> slog::Result {
+        take(&mut self.kv, |kv| Box::new((kv, SingleKV(key, val))));
+        Ok(())
+    }
+    fn emit_i32(&mut self, key: Key, val: i32) -> slog::Result {
+        take(&mut self.kv, |kv| Box::new((kv, SingleKV(key, val))));
+        Ok(())
+    }
+    fn emit_f32(&mut self, key: Key, val: f32) -> slog::Result {
+        take(&mut self.kv, |kv| Box::new((kv, SingleKV(key, val))));
+        Ok(())
+    }
+    fn emit_u64(&mut self, key: Key, val: u64) -> slog::Result {
+        take(&mut self.kv, |kv| Box::new((kv, SingleKV(key, val))));
+        Ok(())
+    }
+    fn emit_i64(&mut self, key: Key, val: i64) -> slog::Result {
+        take(&mut self.kv, |kv| Box::new((kv, SingleKV(key, val))));
+        Ok(())
+    }
+    fn emit_f64(&mut self, key: Key, val: f64) -> slog::Result {
+        take(&mut self.kv, |kv| Box::new((kv, SingleKV(key, val))));
+        Ok(())
+    }
+    fn emit_usize(&mut self, key: Key, val: usize) -> slog::Result {
+        take(&mut self.kv, |kv| Box::new((kv, SingleKV(key, val))));
+        Ok(())
+    }
+    fn emit_isize(&mut self, key: Key, val: isize) -> slog::Result {
+        take(&mut self.kv, |kv| Box::new((kv, SingleKV(key, val))));
+        Ok(())
+    }
+    fn emit_str(&mut self, key: Key, val: &str) -> slog::Result {
+        let val = val.to_owned();
+        take(&mut self.kv, |kv| Box::new((kv, SingleKV(key, val))));
+        Ok(())
+    }
+    fn emit_arguments(
+        &mut self,
+        key: Key,
+        val: &fmt::Arguments,
+    ) -> slog::Result {
+        let val = fmt::format(*val);
+        take(&mut self.kv, |kv| Box::new((kv, SingleKV(key, val))));
+        Ok(())
+    }
+
+    #[cfg(feature = "nested-values")]
+    fn emit_serde(&mut self, key: Key, value: &slog::SerdeValue) -> slog::Result {
+        let val = value.to_sendable();
+        take(&mut self.kv, |kv| Box::new((kv, SingleKV(key, val))));
+        Ok(())
+    }
+}
+// }}}
+
+
+
+
+/*
+pub struct Context {
+    logger: Arc<Logger>,
+    files: Vec<String>,
+}
+
+impl Context {
+    pub fn new(logger: Arc<Logger>, dir: impl Into<PathBuf>) -> Self {
+        let context = Context {
+            logger: logger,
+            files: Vec::new(),
+        };
+
+        context
+    }
+
+    pub fn file(&mut self, dir: impl Into<PathBuf>, name: impl Into<String>) -> &mut Self {
+        let _dir = dir.into();
+        let _name = name.into();
+        let _log = SlogManager::create_file_logger(_name.as_str(), _dir);
+        self.logger.add_context(&_name, _log);
+        self.files.insert(self.files.len(), _name);
+        self
+    }
+
+    pub fn slogger(self, dir: impl Into<PathBuf>, name: impl Into<String>, slogger: slog::Logger) -> Context {
+        let _dir = dir.into();
+        let _name = name.into();
+        let _log = SlogManager::create_explicit_logger(_name.as_str(), _dir, slogger);
+        self.logger.add_context(&_name, _log);
+        let mut _files = self.files;
+        _files.insert(_files.len(), _name);
+        
+        Context {
+            logger: self.logger,
+            files: _files,
+        }
+    }
+
+    pub fn get<T: Into<String>>(&self, slogger: T) -> &slog::Logger
+    {
+        let slogger = self.logger.get_context(slogger.into());
+        slogger
+    }
+
+    pub fn ref_slogger(&self, dir: impl Into<PathBuf>, name: impl Into<String>, slogger: slog::Logger) -> Context {
+        let _dir = dir.into();
+        let _name = name.into();
+        let _log = SlogManager::create_explicit_logger(_name.as_str(), _dir, slogger);
+        self.logger.add_context(&_name, _log);
+        let mut _files = self.files.to_owned();
+        _files.insert(self.files.len(), _name);
+        
+        Context {
+            logger: self.logger.to_owned(),
+            files: _files.to_owned(),
+        }
+    }
+
+    pub fn to_owned(&mut self) -> Context {
+        Context {
+            logger: self.logger.to_owned(),
+            files: self.files.to_owned(),
+        }
+    }
+
+    pub fn log_msg<S: Into<String>>(&self, level: slog::Level, msg: S) {
+        let _msg = msg.into();
+        self.logger.log_msg(level, &_msg);
+        if !self.files.is_empty() {
+            let _files = self.files.clone();
+            self.logger.log_msg_files(level, _files, _msg);
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct LoggerHandle {
+    sender: Sender<(slog::Level, String)>,
+    fsender: Sender<(slog::Level, Vec<String>, String)>,
+}
+
+impl LoggerHandle {
+    pub fn log_msg<S: Into<String>>(&self, level: slog::Level, msg: S) {
+        // Don't actually do the logging here, who knows what thread invoked us!
+        self.sender.send((level, msg.into())).ok();
+    }
+
+    pub fn send_context<S: Into<String>>(&self, level: slog::Level, files: Vec<String>, msg: S) {
+        self.fsender.send((level, files, msg.into())).ok();
+    }
+}
+
+pub struct SlogManager {
+    output: slog::Logger,
+    files: BTreeMap<String, slog::Logger>,
+    incoming: Receiver<(slog::Level, String)>,
+    fincoming: Receiver<(slog::Level, Vec<String>, String)>,
+
+    aggregate_log: bool,
+}
+
+impl SlogManager {
+    pub fn new() -> (LoggerHandle, SlogManager) {
+        let decorator = slog_term::TermDecorator::new().build();
+        let drain = slog_term::FullFormat::new(decorator).build().fuse();
+        let drain = slog_async::Async::new(drain).build().fuse();
+        let _out = slog::Logger::root(drain, o!());
+
+        let (tx, rx) = channel::<(slog::Level, String)>();
+        let (ftx, frx) = channel::<(slog::Level, Vec<String>, String)>();
+
+        let logger = SlogManager {
+            output: _out,
+            files: BTreeMap::new(),
+            incoming: rx,
+            fincoming: frx,
+
+            // Default.
+            aggregate_log: false,
+        };
+
+        let logger_handle = LoggerHandle {
+            sender: tx,
+            fsender: ftx,
+        };
+
+        (logger_handle, logger)
+    }
+
+    pub fn all_log(&mut self, dir: PathBuf) -> &mut Self {
+        match self.files.get("log_all.txt") {
+            Some(s) => (),
+            None => {
+                let logger = SlogManager::create_file_logger("All.txt", dir);
+                self.files.insert("log_all.txt".to_string(), logger);
+            }
+        }
+
+        self.aggregate_log = true;
+        self
+    }
+
+    fn create_file_logger<'a>(name: &'a str, dir: PathBuf) -> slog::Logger {
+        let file = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(dir.join(&name))
+            .unwrap();
+
+        let decorator = slog_term::PlainDecorator::new(file);
+        let drain = slog_term::FullFormat::new(decorator).build().fuse();
+        let drain = slog_async::Async::new(drain).build().fuse();
+        let logger = slog::Logger::root(drain, o!());
+
+        logger
+    }
+
+    fn create_explicit_logger<'a>(name: &'a str, dir: PathBuf, slogger: slog::Logger) -> slog::Logger {
+        let file = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(dir.join(&name))
+            .unwrap();
+        
+
+        let decorator = slog_term::PlainDecorator::new(file);
+        let drain = slog_term::FullFormat::new(decorator).build().fuse();
+        let drain = slog_async::Async::new(drain).build().fuse();
+        let logger = slog::Logger::root(drain, o!(slogger.list().to_owned()));
+
+        logger
+    }
+
+    pub fn poll_once(&self) {
+        while let Ok(msg) = self.incoming.try_recv() {
+            // log for real now, now that we're in the desired thread and environment
+            self.log_msg(msg.0, msg.1);
+        }
+    }
+
+    pub fn poll_files(&self) {
+        while let Ok(msg) = self.fincoming.try_recv() {
+            for file in msg.1 {
+                self.log_msg_file(msg.0, &file, &msg.2)
+            }
+        }
+    }
+
+    fn context(&mut self, name: impl Into<String>, log: slog::Logger) -> &mut Self {
+        let _name = name.into();
+        match self.files.get(_name.as_str()) {
+            Some(s) => (),
+            None => {
+                self.files.insert(_name, log);
+            }
+        }
+        self
+    }
+
+    fn log_msg<S: Into<String>>(&self, level: slog::Level, msg: S) -> &Self {
+        let _msg = msg.into();
+
+        match level {
+            slog::Level::Error => {
+                _error!(self.output, "{}", _msg);
+                if self.aggregate_log {
+                    _error!(self.files["log_all.txt"], "{}", _msg);
+                }
+            }
+            slog::Level::Warning => {
+                _warn!(self.output, "{}", _msg);
+                if self.aggregate_log {
+                    _warn!(self.files["log_all.txt"], "{}", _msg);
+                }
+            }
+            slog::Level::Info => {
+                _info!(self.output, "{}", _msg);
+                if self.aggregate_log {
+                    _info!(self.files["log_all.txt"], "{}", _msg);
+                }
+            }
+            slog::Level::Debug => {
+                _debug!(self.output, "{}", _msg);
+                if self.aggregate_log {
+                    _debug!(self.files["log_all.txt"], "{}", _msg);
+                }
+            }
+            slog::Level::Trace => {
+                _trace!(self.output, "{}", _msg);
+                if self.aggregate_log {
+                    _trace!(self.files["log_all.txt"], "{}", _msg);
+                }
+            }
+            _ => ()
+        }
+
+        self
+    }
+
+    fn log_msg_file<S: Into<String>>(&self, level: slog::Level, file: S, msg: S) {
+        let _msg = msg.into();
+        let _file = file.into();
+
+        match level {
+            slog::Level::Error => {
+                _error!(self.files[_file.as_str()], "{}", _msg);
+            }
+            slog::Level::Warning => {
+                _warn!(self.files[_file.as_str()], "{}", _msg);
+            }
+            slog::Level::Info => {
+                _info!(self.files[_file.as_str()], "{}", _msg);
+            }
+            slog::Level::Debug => {
+                _debug!(self.files[_file.as_str()], "{}", _msg);
+            }
+            slog::Level::Trace => {
+                _trace!(self.files[_file.as_str()], "{}", _msg);
+            }
+            _ => ()
+        }
+    }
+}
+
+pub struct Logger {
+    handle: LoggerHandle,
+    logger: Arc<RwLock<SlogManager>>,
+}
+
+impl Logger {
+    pub fn new(logh: LoggerHandle, log: Arc<RwLock<SlogManager>>) -> Logger {
+        let logging = Logger {
+            handle: logh,
+            logger: log,
+        };
+
+        logging
+    }
+
+    pub fn add_context(&self, name: impl Into<String>, log: slog::Logger) -> &Self {
+        self.logger.try_write().unwrap().context(name.into(), log);
+
+        self
+    }
+
+    pub fn get_context(&self, name: impl Into<String>) -> &slog::Logger {
+        let slogger = self.logger.try_read().unwrap().files.get(&name.into()).unwrap();
+        slogger
+    }
+
+    pub fn log_msg<S: Into<String>>(&self, level: slog::Level, msg: S) -> &Self {
+        self.handle.log_msg(level, msg.into());
+        self.logger.try_read().unwrap().poll_once();
+
+        self
+    }
+
+    pub fn log_msg_files<S: Into<String>>(&self, level: slog::Level, files: Vec<String>, msg: S) -> &Self {
+        self.handle.send_context(level.into(), files, msg.into());
+        self.logger.try_read().unwrap().poll_files();
+
+        self
+    }
+}
+
+*/
+
+/*
+
+#[macro_export]
+macro_rules! error {
+    ($logging:expr, $($message:tt)*) => {
+        $crate::context::Context::log_msg($logging, $crate::slog::Level::Error, format!($($message)*))
+    }
+}
+
+#[macro_export]
+macro_rules! warn {
+    ($logging:expr, $($message:tt)*) => {
+        $crate::context::Context::log_msg($logging, $crate::slog::Level::Warning, format!($($message)*))
+    }
+}
+
+#[macro_export]
+macro_rules! info {
+    ($logging:expr, $($message:tt)*) => {
+        $crate::context::Context::log_msg($logging, $crate::slog::Level::Info, format!($($message)*))
+    }
+}
+
+#[macro_export]
+macro_rules! debug {
+    ($logging:expr, $($message:tt)*) => {
+        $crate::context::Context::log_msg($logging, $crate::slog::Level::Debug, format!($($message)*))
+    }
+}
+
+#[macro_export]
+macro_rules! trace {
+    ($logging:expr, $($message:tt)*) => {
+        $crate::context::Context::log_msg($logging, $crate::slog::Level::Trace, format!($($message)*))
+    }
+}
+
+*/
+
+/*
+// This is something to play with later for greater control.
+#[macro_export]
+macro_rules! info {
+    ($logger:expr, $($message:tt),*) => {
+        //$crate::Logger::log_info($logger, $crate::_format_args!($($message)*))
+        $crate::info!(@ $logger, $($message),*)
+    };
+
+    (@ $logger:expr, $first:tt $(, $rem:tt)*) => {
+        $crate::Logger::log_info($logger, format!(($first), $($rem),*));
+    };
+}
+*/
+

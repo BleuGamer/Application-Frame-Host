@@ -1,5 +1,5 @@
 pub mod server {
-    use asio_logger::{info, error};
+    use asio_logger::{error, info};
     use util;
 
     use std::fs::File;
@@ -31,7 +31,8 @@ pub mod server {
             // let raw: &str = &Self::read_cwd_file()[..];
             // let config: serde_json::Value = serde_json::from_str(raw)?;
 
-            let mut logger = asio_logger::context::Context::new(logging, util::env::get_cwd().unwrap());
+            let mut logger =
+                asio_logger::context::Context::new(logging, util::env::get_cwd().unwrap());
             logger.file(util::env::get_cwd().unwrap(), "log-frame-host.txt");
             info!(&logger, "Initializing frame-host!");
 
