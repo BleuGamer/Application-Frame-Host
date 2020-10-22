@@ -51,7 +51,12 @@ impl SlogManager {
             Some(t) => t,
             None => {
                 let sm = SlogManager {};
-                SM_INSTANCE.set(sm);
+                let err = SM_INSTANCE.set(sm);
+                match err {
+                    Ok(r) => (),
+                    Err(e) => panic!("You should never see this message.\
+                                                  Something went very, very, wrong.")
+                }
                 SM_INSTANCE.get().unwrap()
             }
         }
@@ -564,7 +569,7 @@ impl<T> From<std::sync::PoisonError<T>> for AsyncError {
     fn from(err: std::sync::PoisonError<T>) -> AsyncError {
         AsyncError::Fatal(Box::new(io::Error::new(
             io::ErrorKind::BrokenPipe,
-            err.description(),
+            err.to_string(),
         )))
     }
 }
