@@ -34,7 +34,6 @@ use take_mut::take;
 
 use std::collections::BTreeMap;
 use std::sync::Arc;
-use std::ops::{Deref, DerefMut};
 // }}}
 
 // {{{ Log Manager
@@ -588,18 +587,25 @@ pub type AsyncResult<T> = std::result::Result<T, AsyncError>;
 
 // {{{ AsyncCore
 /// `AsyncCore` builder
-pub struct AsyncCoreBuilder {
+pub struct AsyncCoreBuilder<D>
+where
+    D: slog::Drain<Err = slog::Never, Ok = ()> + Send + 'static,
+{
     chan_size: usize,
     blocking: bool,
+    drain: D,
     thread_name: Option<String>,
 }
 
-impl AsyncCoreBuilder {
-    fn new(drain: Box<dyn Drain<Err = slog::Never, Ok = ()> + Send + 'static>) -> Self {
-        SlogManager::init_or_get().lock().unwrap().deref_mut().insert(drain);
+impl<D> AsyncCoreBuilder<D>
+where
+    D: slog::Drain<Err = slog::Never, Ok = ()> + Send + 'static,
+{
+    fn new(drain: D) -> Self {
         AsyncCoreBuilder {
             chan_size: 128,
             blocking: false,
+            drain,
             thread_name: None,
         }
     }
@@ -639,6 +645,7 @@ impl AsyncCoreBuilder {
         if let Some(thread_name) = self.thread_name {
             builder = builder.name(thread_name);
         }
+        let drain = self.drain;
         let join = builder
             .spawn(move || loop {
                 match rx.recv().unwrap() {
@@ -649,13 +656,12 @@ impl AsyncCoreBuilder {
                             tag: &r.tag,
                         };
 
-                        for drain in &SlogManager::init_or_get().lock().unwrap().deref_mut().drains {
-                            drain.log(
+                        drain
+                            .log(
                                 &Record::new(&rs, &format_args!("{}", r.msg), BorrowedKV(&r.kv)),
                                 &r.logger_values,
                             )
-                                .unwrap();
-                        }
+                            .unwrap();
                     }
                     AsyncMsg::Finish => return,
                 }
@@ -766,16 +772,18 @@ pub struct AsyncCore {
 
 impl AsyncCore {
     /// New `AsyncCore` with default parameters
-    pub fn new(drain: Box<dyn Drain<Err = slog::Never,
-                Ok = ()> + Send + 'static + std::panic::RefUnwindSafe>) -> Self
+    pub fn new<D>(drain: D) -> Self
+    where
+        D: slog::Drain<Err = slog::Never, Ok = ()> + Send + 'static,
+        D: std::panic::RefUnwindSafe,
     {
         AsyncCoreBuilder::new(drain).build()
     }
 
     /// Build `AsyncCore` drain with custom parameters
-    pub fn custom (
-        drain: Box<dyn Drain<Err = slog::Never, Ok = ()> + Send + 'static>,
-    ) -> AsyncCoreBuilder {
+    pub fn custom<D: slog::Drain<Err = slog::Never, Ok = ()> + Send + 'static>(
+        drain: D,
+    ) -> AsyncCoreBuilder<D> {
         AsyncCoreBuilder::new(drain)
     }
     fn get_sender(
@@ -890,14 +898,20 @@ pub enum OverflowStrategy {
 }
 
 /// `Async` builder
-pub struct AsyncBuilder {
-    core: AsyncCoreBuilder,
+pub struct AsyncBuilder<D>
+where
+    D: slog::Drain<Err = slog::Never, Ok = ()> + Send + 'static,
+{
+    core: AsyncCoreBuilder<D>,
     // Increment a counter whenever a message is dropped due to not fitting inside the channel.
     inc_dropped: bool,
 }
 
-impl AsyncBuilder {
-    fn new(drain: Box<dyn Drain<Err = slog::Never, Ok = ()> + Send + 'static>) -> AsyncBuilder {
+impl<D> AsyncBuilder<D>
+where
+    D: slog::Drain<Err = slog::Never, Ok = ()> + Send + 'static,
+{
+    fn new(drain: D) -> AsyncBuilder<D> {
         AsyncBuilder {
             core: AsyncCoreBuilder::new(drain),
             inc_dropped: true,
@@ -1005,7 +1019,7 @@ pub struct Async {
 
 impl Async {
     /// New `AsyncCore` with default parameters
-    pub fn default(drain: Box<dyn Drain<Err = slog::Never, Ok = ()> + Send + 'static>) -> Self {
+    pub fn default<D: slog::Drain<Err = slog::Never, Ok = ()> + Send + 'static>(drain: D) -> Self {
         AsyncBuilder::new(drain).build()
     }
 
@@ -1014,10 +1028,10 @@ impl Async {
     /// The wrapped drain must handle all results (`Drain<Ok=(),Error=Never>`)
     /// since there's no way to return it back. See `slog::DrainExt::fuse()` and
     /// `slog::DrainExt::ignore_res()` for typical error handling strategies.
-    pub fn new(
-        drain: Box<dyn Drain<Err = slog::Never, Ok = ()> + Send + 'static>,
+    pub fn new<D: slog::Drain<Err = slog::Never, Ok = ()> + Send + 'static>(
+        drain: D,
 
-    ) -> AsyncBuilder {
+    ) -> AsyncBuilder<D> {
         AsyncBuilder::new(drain)
     }
 
