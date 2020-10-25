@@ -6,6 +6,7 @@ authors = ["Lance Wallis <bleudeveloper@gmail.com>"]
 edition = "2018"
 
 [lib]
+crate-type = ["dylib"]
 path = "util.rs"
 
 [dependencies]
