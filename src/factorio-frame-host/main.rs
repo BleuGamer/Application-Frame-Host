@@ -2,8 +2,11 @@
 #![allow(unused_imports)]
 #![allow(unused_variables)]
 
+#[macro_use]
+extern crate slog;
+use slog::Drain;
+use slog_term;
 use asio_logger;
-use asio_logger::info;
 use frame_host;
 use util;
 use web_api;
@@ -28,14 +31,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ctrl_c_events = ctrl_channel()?;
     let ticks = tick(Duration::from_secs(1));
 
-    let (lhandle, mut slogger) = asio_logger::context::SlogManager::new();
-    slogger.all_log(util::env::get_cwd().unwrap());
-    let _locked_logger = Arc::new(RwLock::new(slogger));
-    let _logger = Arc::new(asio_logger::context::Logger::new(lhandle, _locked_logger));
-    let logger = Arc::new(asio_logger::context::Context::new(
-        Arc::clone(&_logger),
-        util::env::get_cwd().unwrap(),
-    ));
+    let decorator = slog_term::TermDecorator::new().build();
+    let drain = slog_term::FullFormat::new(decorator).build().fuse();
+    let drain = asio_logger::Async::new(drain).build().fuse();
+    let logger = slog::Logger::root(drain, o!());
 
     //logger.log_msg("STARTING SERVER");
 
@@ -47,7 +46,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let fpath: PathBuf = PathBuf::from(server_details.executable.as_ref().unwrap());
     //.join("x64").join("factorio");
 
-    let mut fserver = frame_host::server::Server::new(_logger, fppath);
+    let mut fserver = frame_host::server::Server::new( fppath);
     fserver.parent(fpparent);
     fserver.child(fpath);
     let mut output = util::env::get_cwd().unwrap();
