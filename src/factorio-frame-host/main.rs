@@ -6,6 +6,7 @@
 extern crate slog;
 use slog::Drain;
 use slog_term;
+use slog_async;
 use asio_logger;
 use frame_host;
 use util;
@@ -33,10 +34,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let decorator = slog_term::TermDecorator::new().build();
     let drain = slog_term::FullFormat::new(decorator).build().fuse();
-    let drain = asio_logger::Async::new(drain).build().fuse();
-    let logger = slog::Logger::root(drain, o!());
+    let drain = slog_async::Async::new(drain).build().fuse();
+    let _logger = slog::Logger::root(drain, o!());
+    let mut slogger = asio_logger::SlogManager::new();
+    slogger.add_all_drain(_logger);
+    let logger = asio_logger::Context::new(&slogger).fuse();
 
-    //logger.log_msg("STARTING SERVER");
+    info!(logger, "STARTING SERVER");
 
     let server_details = &mut util::parser::ServerDetails::default();
     util::parser::read_contents("factorio.json", server_details).unwrap();
