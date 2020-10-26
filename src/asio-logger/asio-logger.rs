@@ -3,7 +3,7 @@
 // }}}
 
 // {{{ Imports & meta
-#![warn(missing_docs)]
+//#![warn(missing_docs)]
 // For development.
 #![allow(unused_imports)]
 #![allow(unused_variables)]
@@ -35,39 +35,6 @@ use take_mut::take;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 // }}}
-
-// {{{ Log Manager
-/// Only one instance of SlogManager can ever exist.
-static SM_INSTANCE: OnceCell<Mutex<SlogManager>> = OnceCell::new();
-
-struct SlogManager {
-    drains: Vec<Box<dyn Drain<Err = slog::Never, Ok = ()> + Send + 'static>>,
-}
-
-impl SlogManager {
-    fn init_or_get() -> &'static Mutex<SlogManager> {
-        let test_set = SM_INSTANCE.get();
-        return match test_set {
-            Some(t) => test_set.unwrap(),
-            _ => {
-                let sm = SlogManager {
-                    drains: Vec::new(),
-                };
-                let err = SM_INSTANCE.set(Mutex::new(sm));
-                match err {
-                    Ok(r) => (),
-                    Err(e) => panic!("You should never see this message.\
-                                                  Something went very, very, wrong.")
-                }
-                test_set.unwrap()
-            }
-        }
-    }
-
-    fn insert(&mut self, drain: Box<dyn Drain<Err = slog::Never, Ok = ()> + Send + 'static>) {
-        self.drains.push(drain);
-    }
-}
 
 /*
 impl Context {
@@ -530,14 +497,22 @@ impl Serializer for ToSendSerializer {
         take(&mut self.kv, |kv| Box::new((kv, SingleKV(key, val))));
         Ok(())
     }
-    fn emit_arguments(&mut self, key: Key, val: &fmt::Arguments) -> slog::Result {
+    fn emit_arguments(
+        &mut self,
+        key: Key,
+        val: &fmt::Arguments,
+    ) -> slog::Result {
         let val = fmt::format(*val);
         take(&mut self.kv, |kv| Box::new((kv, SingleKV(key, val))));
         Ok(())
     }
 
     #[cfg(feature = "nested-values")]
-    fn emit_serde(&mut self, key: Key, value: &slog::SerdeValue) -> slog::Result {
+    fn emit_serde(
+        &mut self,
+        key: Key,
+        value: &slog::SerdeValue,
+    ) -> slog::Result {
         let val = value.to_sendable();
         take(&mut self.kv, |kv| Box::new((kv, SingleKV(key, val))));
         Ok(())
@@ -585,11 +560,77 @@ pub type AsyncResult<T> = std::result::Result<T, AsyncError>;
 
 // }}}
 
+// {{{ Slog Manager
+
+/// Describes potential errors when calling Context
+/// TODO: elaborate/extend
+#[derive(Debug)]
+pub enum ContextError {
+    /// Fatal problem
+    Fatal(Box<dyn std::error::Error>),
+}
+
+/// Alias.
+pub type ContextResult<T> = std::result::Result<T, ContextError>;
+
+pub struct SlogManager<D>
+where
+    D: slog::Drain<Err = slog::Never, Ok = ()> + Send + 'static,
+{
+    drains: BTreeMap<String, D>,
+}
+
+
+pub struct Context<'a, D>
+where
+    D: slog::Drain<Err = slog::Never, Ok = ()> + Send + 'static,
+{
+    asio: &'a SlogManager<D>,
+    log_drains: Vec<String>,
+}
+
+impl<'a, D> Context<'a, D>
+where
+    D: slog::Drain<Err = slog::Never, Ok = ()> + Send + 'static,
+{
+    pub fn new(slog_manager: &'a SlogManager<D>, key: impl Into<String>) -> Context<D> {
+        let mut context = Context {
+            asio: slog_manager,
+            log_drains: Vec::new(),
+        };
+        context.log_drains.push(key.into());
+        context
+    }
+}
+
+impl<D> Drain for Context<'_, D>
+where
+    D: slog::Drain<Err = slog::Never, Ok = ()> + Send + 'static,
+{
+    type Ok = ();
+    // TODO: Expand
+    type Err = ContextError;
+
+    fn log(
+        &self,
+        record: &Record,
+        logger_values: &OwnedKVList,
+    ) -> ContextResult<()> {
+        // Only works with this file ATM.
+        for drain in &self.log_drains {
+            self.asio.drains.get(drain).unwrap().log(record, logger_values);
+        }
+        Ok(())
+    }
+}
+
+// }}}
+
 // {{{ AsyncCore
 /// `AsyncCore` builder
 pub struct AsyncCoreBuilder<D>
-where
-    D: slog::Drain<Err = slog::Never, Ok = ()> + Send + 'static,
+    where
+        D: slog::Drain<Err = slog::Never, Ok = ()> + Send + 'static,
 {
     chan_size: usize,
     blocking: bool,
@@ -598,8 +639,8 @@ where
 }
 
 impl<D> AsyncCoreBuilder<D>
-where
-    D: slog::Drain<Err = slog::Never, Ok = ()> + Send + 'static,
+    where
+        D: slog::Drain<Err = slog::Never, Ok = ()> + Send + 'static,
 {
     fn new(drain: D) -> Self {
         AsyncCoreBuilder {
@@ -650,18 +691,7 @@ where
             .spawn(move || loop {
                 match rx.recv().unwrap() {
                     AsyncMsg::Record(r) => {
-                        let rs = RecordStatic {
-                            location: &*r.location,
-                            level: r.level,
-                            tag: &r.tag,
-                        };
-
-                        drain
-                            .log(
-                                &Record::new(&rs, &format_args!("{}", r.msg), BorrowedKV(&r.kv)),
-                                &r.logger_values,
-                            )
-                            .unwrap();
+                        r.log_to(&drain).unwrap();
                     }
                     AsyncMsg::Finish => return,
                 }
@@ -773,15 +803,17 @@ pub struct AsyncCore {
 impl AsyncCore {
     /// New `AsyncCore` with default parameters
     pub fn new<D>(drain: D) -> Self
-    where
-        D: slog::Drain<Err = slog::Never, Ok = ()> + Send + 'static,
-        D: std::panic::RefUnwindSafe,
+        where
+            D: slog::Drain<Err = slog::Never, Ok = ()> + Send + 'static,
+            D: std::panic::RefUnwindSafe,
     {
         AsyncCoreBuilder::new(drain).build()
     }
 
     /// Build `AsyncCore` drain with custom parameters
-    pub fn custom<D: slog::Drain<Err = slog::Never, Ok = ()> + Send + 'static>(
+    pub fn custom<
+        D: slog::Drain<Err = slog::Never, Ok = ()> + Send + 'static,
+    >(
         drain: D,
     ) -> AsyncCoreBuilder<D> {
         AsyncCoreBuilder::new(drain)
@@ -790,7 +822,9 @@ impl AsyncCore {
         &self,
     ) -> Result<
         &crossbeam_channel::Sender<AsyncMsg>,
-        std::sync::PoisonError<sync::MutexGuard<crossbeam_channel::Sender<AsyncMsg>>>,
+        std::sync::PoisonError<
+            sync::MutexGuard<crossbeam_channel::Sender<AsyncMsg>>,
+        >,
     > {
         self.tl_sender.get_or_try(|| Ok(self.ref_sender.clone()))
     }
@@ -813,31 +847,85 @@ impl Drain for AsyncCore {
     type Ok = ();
     type Err = AsyncError;
 
-    fn log(&self, record: &Record, logger_values: &OwnedKVList) -> AsyncResult<()> {
+    fn log(
+        &self,
+        record: &Record,
+        logger_values: &OwnedKVList,
+    ) -> AsyncResult<()> {
         let mut ser = ToSendSerializer::new();
         record
             .kv()
             .serialize(record, &mut ser)
             .expect("`ToSendSerializer` can't fail");
 
-        self.send(AsyncRecord {
-            msg: fmt::format(*record.msg()),
-            level: record.level(),
-            location: Box::new(*record.location()),
-            tag: String::from(record.tag()),
-            logger_values: logger_values.clone(),
-            kv: ser.finish(),
-        })
+        self.send(AsyncRecord::from(record, logger_values))
     }
 }
 
-struct AsyncRecord {
+/// Serialized record.
+pub struct AsyncRecord {
     msg: String,
     level: Level,
     location: Box<slog::RecordLocation>,
     tag: String,
     logger_values: OwnedKVList,
     kv: Box<dyn KV + Send>,
+}
+
+impl AsyncRecord {
+    /// Serializes a `Record` and an `OwnedKVList`.
+    pub fn from(record: &Record, logger_values: &OwnedKVList) -> Self {
+        let mut ser = ToSendSerializer::new();
+        record
+            .kv()
+            .serialize(record, &mut ser)
+            .expect("`ToSendSerializer` can't fail");
+
+        AsyncRecord {
+            msg: fmt::format(*record.msg()),
+            level: record.level(),
+            location: Box::new(*record.location()),
+            tag: String::from(record.tag()),
+            logger_values: logger_values.clone(),
+            kv: ser.finish(),
+        }
+    }
+
+    /// Writes the record to a `Drain`.
+    pub fn log_to<D: Drain>(self, drain: &D) -> Result<D::Ok, D::Err> {
+        let rs = RecordStatic {
+            location: &*self.location,
+            level: self.level,
+            tag: &self.tag,
+        };
+
+        drain.log(
+            &Record::new(
+                &rs,
+                &format_args!("{}", self.msg),
+                BorrowedKV(&self.kv),
+            ),
+            &self.logger_values,
+        )
+    }
+
+    /// Deconstruct this `AsyncRecord` into a record and `OwnedKVList`.
+    pub fn as_record_values(&self, mut f: impl FnMut(&Record, &OwnedKVList)) {
+        let rs = RecordStatic {
+            location: &*self.location,
+            level: self.level,
+            tag: &self.tag,
+        };
+
+        f(
+            &Record::new(
+                &rs,
+                &format_args!("{}", self.msg),
+                BorrowedKV(&self.kv),
+            ),
+            &self.logger_values,
+        )
+    }
 }
 
 enum AsyncMsg {
@@ -899,8 +987,8 @@ pub enum OverflowStrategy {
 
 /// `Async` builder
 pub struct AsyncBuilder<D>
-where
-    D: slog::Drain<Err = slog::Never, Ok = ()> + Send + 'static,
+    where
+        D: slog::Drain<Err = slog::Never, Ok = ()> + Send + 'static,
 {
     core: AsyncCoreBuilder<D>,
     // Increment a counter whenever a message is dropped due to not fitting inside the channel.
@@ -908,8 +996,8 @@ where
 }
 
 impl<D> AsyncBuilder<D>
-where
-    D: slog::Drain<Err = slog::Never, Ok = ()> + Send + 'static,
+    where
+        D: slog::Drain<Err = slog::Never, Ok = ()> + Send + 'static,
 {
     fn new(drain: D) -> AsyncBuilder<D> {
         AsyncBuilder {
@@ -928,12 +1016,17 @@ where
     }
 
     /// Sets what will happen if the channel is full.
-    pub fn overflow_strategy(self, overflow_strategy: OverflowStrategy) -> Self {
+    pub fn overflow_strategy(
+        self,
+        overflow_strategy: OverflowStrategy,
+    ) -> Self {
         let (block, inc) = match overflow_strategy {
             OverflowStrategy::Block => (true, false),
             OverflowStrategy::Drop => (false, false),
             OverflowStrategy::DropAndReport => (false, true),
-            OverflowStrategy::DoNotMatchAgainstThisAndReadTheDocs => panic!("Invalid variant"),
+            OverflowStrategy::DoNotMatchAgainstThisAndReadTheDocs => {
+                panic!("Invalid variant")
+            }
         };
         AsyncBuilder {
             core: self.core.blocking(block),
@@ -1019,7 +1112,11 @@ pub struct Async {
 
 impl Async {
     /// New `AsyncCore` with default parameters
-    pub fn default<D: slog::Drain<Err = slog::Never, Ok = ()> + Send + 'static>(drain: D) -> Self {
+    pub fn default<
+        D: slog::Drain<Err = slog::Never, Ok = ()> + Send + 'static,
+    >(
+        drain: D,
+    ) -> Self {
         AsyncBuilder::new(drain).build()
     }
 
@@ -1030,7 +1127,6 @@ impl Async {
     /// `slog::DrainExt::ignore_res()` for typical error handling strategies.
     pub fn new<D: slog::Drain<Err = slog::Never, Ok = ()> + Send + 'static>(
         drain: D,
-
     ) -> AsyncBuilder<D> {
         AsyncBuilder::new(drain)
     }
@@ -1044,8 +1140,8 @@ impl Async {
                     "slog-async",
                     &format_args!(
                         "slog-async: logger dropped messages \
-                             due to channel \
-                             overflow"
+                         due to channel \
+                         overflow"
                     ),
                     b!("count" => dropped)
                 ),
@@ -1068,7 +1164,11 @@ impl Drain for Async {
     type Err = AsyncError;
 
     // TODO: Review `Ordering::Relaxed`
-    fn log(&self, record: &Record, logger_values: &OwnedKVList) -> AsyncResult<()> {
+    fn log(
+        &self,
+        record: &Record,
+        logger_values: &OwnedKVList,
+    ) -> AsyncResult<()> {
         self.push_dropped(logger_values)?;
 
         match self.core.log(record, logger_values) {

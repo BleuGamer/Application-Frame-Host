@@ -1,11 +1,11 @@
 pub mod server {
-        use util;
+    //use util;
 
     use std::fs::File;
     use std::io::Write;
     use std::path::PathBuf;
     use std::process::{Child, Command, Stdio};
-    use std::sync::Arc;
+    //use std::sync::Arc;
 
     pub struct Server {
         pub root: PathBuf,
