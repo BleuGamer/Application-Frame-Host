@@ -15,6 +15,13 @@
 
 ---------
 
+### Helpers
+
+- [ ] File i/o constructors based on relative path
+- [ ] Slog drain duplication for submodules/crates
+
+---------
+
 ### Parser
 
 TBD
