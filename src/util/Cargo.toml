@@ -5,9 +5,6 @@ version = "0.1.0"
 authors = ["Lance Wallis <bleudeveloper@gmail.com>"]
 edition = "2018"
 
-[workspace]
-members = [".", "examples/environment"]
-
 [lib]
 crate-type = ["dylib"]
 path = "util.rs"
