@@ -7,7 +7,6 @@ extern crate slog;
 use slog::Drain;
 use slog_term;
 use slog_async;
-use asio_logger;
 use frame_host;
 use util;
 use web_api;
@@ -16,12 +15,12 @@ use futures::future::lazy;
 use std::borrow::Cow;
 use std::env;
 use std::error::Error;
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::io;
 use std::io::{BufRead, BufReader};
 use std::path::{Path, PathBuf};
 use std::process::Child;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::sync::RwLock;
 use std::thread;
 use std::time::Duration;
@@ -33,12 +32,24 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ticks = tick(Duration::from_secs(1));
 
     let decorator = slog_term::TermDecorator::new().build();
-    let drain = slog_term::FullFormat::new(decorator).build().fuse();
+    let drain = slog_term::CompactFormat::new(decorator).build().fuse();
     let drain = slog_async::Async::new(drain).build().fuse();
-    let _logger = slog::Logger::root(drain, o!());
-    let mut slogger = asio_logger::SlogManager::new();
-    slogger.add_all_drain(_logger);
-    let logger = asio_logger::Context::new(&slogger).fuse();
+
+    let dir = util::env::get_cwd().unwrap();
+    let file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .truncate(true)
+        .open(dir.join("log_all.txt"))
+        .unwrap();
+    let fdecorator = slog_term::PlainDecorator::new(file);
+    let fdrain = slog_term::CompactFormat::new(fdecorator).build().fuse();
+    let fdrain = slog_async::Async::new(fdrain).build().fuse();
+
+    let alldrain = Mutex::new(slog::Duplicate::new(drain, fdrain)).fuse();
+    let alldrain = slog_async::Async::new(alldrain).build().fuse();
+
+    let logger = slog::Logger::root(alldrain, o!());
 
     info!(logger, "STARTING SERVER");
 

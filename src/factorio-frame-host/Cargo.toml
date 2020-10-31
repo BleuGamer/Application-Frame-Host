@@ -18,7 +18,6 @@ frame-host = { path = "../frame-host" }
 slog = "2.5.2"
 slog-term = "2.6.0"
 slog-async = "2.5.0"
-asio-logger = { path = "../asio-logger" }
 util = { path = "../util" }
 web-api = { path = "../web-api" }
 

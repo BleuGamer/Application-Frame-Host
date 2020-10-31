@@ -11,7 +11,6 @@ path = "frame-host.rs"
 [dependencies]
 slog = "2.5.2"
 slog-term = "2.6.0"
-asio-logger = { path = "../asio-logger" }
 util = { path = "../util" }
 
 serde = "1.0"

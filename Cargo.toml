@@ -4,6 +4,5 @@ members = [
     "src/util",
     "src/factorio-frame-host",
     "src/frame-host",
-    "src/asio-logger",
     "src/web-api",
 ]

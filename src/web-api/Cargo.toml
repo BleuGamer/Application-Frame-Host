@@ -8,7 +8,6 @@ edition = "2018"
 path = "web-api.rs"
 
 [dependencies]
-asio-logger = { path = "../asio-logger" }
 util = { path = "../util" }
 
 actix = "0.10.0"
