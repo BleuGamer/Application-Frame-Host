@@ -50,6 +50,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let alldrain = slog_async::Async::new(alldrain).build().fuse();
 
     let logger = slog::Logger::root(alldrain, o!());
+    let _logger = logger.clone();
 
     info!(logger, "STARTING SERVER");
 
@@ -96,8 +97,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // This is unsafe.
         // Temporary testing.
         // TODO: Proper Actix Async handling.
-        let waw = web_api::start();
-        let was = web_api::start_web_socket();
+        let waw = web_api::web_server::start(_logger);
+        let was = web_api::web_server::start_web_socket();
     });
 
     loop {
