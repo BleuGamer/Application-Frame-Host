@@ -4,7 +4,7 @@
 
 # Ignore rust intermediates and binaries.
 target/
-/Cargo.lock
+Cargo.lock
 **/*.rs.bk
 
 # Node.js operations and intermediates.
