@@ -1,3 +1,3 @@
 fn main() {
-    println!("Hello, world!");
+    println!(util::env::get_cwd().unwrap().display());
 }
