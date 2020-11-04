@@ -1,7 +1,7 @@
 use util;
 
 use slog::{Drain, Logger, o};
-use actix_slog::StructuredLogger;
+use crate::actix_slog::StructuredLogger;
 
 use actix::{Actor, StreamHandler};
 use actix_files as fs;

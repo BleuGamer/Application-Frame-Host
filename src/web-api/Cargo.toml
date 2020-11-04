@@ -21,4 +21,8 @@ actix-files = "0.3.0"
 actix-session = "0.4.0"
 actix-utils = "2.0.0"
 
+chrono = "0.4.19"
+futures = "0.3.7"
+pin-project = "1.0.1"
+
 env_logger = "0.7.1"

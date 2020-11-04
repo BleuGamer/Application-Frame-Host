@@ -50,7 +50,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let alldrain = slog_async::Async::new(alldrain).build().fuse();
 
     let logger = slog::Logger::root(alldrain, o!());
-    let _logger = logger.clone();
 
     info!(logger, "STARTING SERVER");
 
@@ -93,11 +92,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let tpath = std::env::current_dir()?;
     info!(&logger, "PWD: {}", tpath.display());
 
+    let actix_logger = logger.clone();
     std::thread::spawn(move || {
         // This is unsafe.
         // Temporary testing.
         // TODO: Proper Actix Async handling.
-        let waw = web_api::web_server::start(_logger);
+        let waw = web_api::web_server::start(actix_logger);
         let was = web_api::web_server::start_web_socket();
     });
 
