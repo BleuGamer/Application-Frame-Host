@@ -1,0 +1,46 @@
+{
+  "name": "application-frame-host",
+  "version": "0.1.0",
+  "description": "Application administration web ui.",
+  "main": "ui/index.js",
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test",
+    "eject": "react-scripts eject"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BarronKane/Application-Frame-Host.git"
+  },
+  "author": "Lance Wallis <bleudeveloper@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "admin-lte": "^3.1.0-rc",
+    "react": "^17.0.1",
+    "react-dom": "^17.0.1",
+    "react-router": "^5.2.0",
+    "react-router-dom": "^5.2.0",
+    "react-scripts": "4.0.1",
+    "sass-loader": "^10.1.0",
+    "web-vitals": "^0.2.4"
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 2 chrome version",
+      "last 2 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}
