@@ -8,7 +8,7 @@
     "dev": "npm run development",
     "development": "webpack --config=webpack.config.js --mode=development --progress",
     "build": "npm run production",
-    "production": "webpack --config=webpack.config.js --mode=production --progess"
+    "production": "webpack --config=webpack.config.js --mode=production --progress"
   },
   "repository": {
     "type": "git",
@@ -26,6 +26,7 @@
     "node-sass": "^5.0.0",
     "resolve-url-loader": "^3.1.2",
     "sass-loader": "^10.1.0",
+    "style-loader": "^2.0.0",
     "webpack": "^5.10.0",
     "webpack-cli": "^4.2.0"
   },

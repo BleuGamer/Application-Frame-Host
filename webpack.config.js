@@ -1,10 +1,12 @@
 const path = require('path');
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+const webpack = require('webpack');
 
 module.exports = (env, argv) => {
     const isProduction = argv.mode == 'production';
 
     return {
+        plugins: [new MiniCssExtractPlugin()],
         entry: {
             bundle: './ui/index.js',
             style: './ui/index.scss'
@@ -47,6 +49,24 @@ module.exports = (env, argv) => {
                         {
                             loader: "css-loader",
                             options: {
+                                // always make sourceMap. resolver-url-loader is needing it
+                                "sourceMap": !isProduction,
+                            },
+                        },
+                        "resolve-url-loader",
+                        {
+                            loader: "sass-loader",
+                            options: {
+                                sourceMap: true,
+                            }
+                        }
+                    ] 
+                    /*
+                    use: [
+                        MiniCssExtractPlugin.loader,
+                        {
+                            loader: "css-loader",
+                            options: {
                                 "sourceMap": !isProduction,
                             }
                         },
@@ -59,8 +79,8 @@ module.exports = (env, argv) => {
                             }
                         }
                     ]
+                    */
                 },
-                
             ]
         }
     }
