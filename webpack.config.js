@@ -1,5 +1,6 @@
 const path = require('path');
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
+const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
 const webpack = require('webpack');
 
 module.exports = (env, argv) => {
@@ -10,7 +11,6 @@ module.exports = (env, argv) => {
             new MiniCssExtractPlugin({
                 filename: "[name].css"
             }),
-            
         ],
         entry: {
             bundle: './ui/index.js',
@@ -73,6 +73,32 @@ module.exports = (env, argv) => {
                         name: '[name].[ext]',
                     }
                 },
+                {
+                    test: /(\.(png|jpe?g|gif|ico)$|^((?!font).)*\.svg$)/,
+                    type: 'asset/resource',
+                },
+                {
+                    test: /(\.(woff2?|ttf|eot|otf)$|font.*\.svg$)/,
+                    type: 'asset/resource',
+                }            
+            ]
+        },
+        optimization: {
+            minimize: isProduction,
+            minimizer: [
+                (isProduction) ?
+                new CssMinimizerPlugin({
+                    parallel: true,
+                    minimizerOptions: {
+                        preset: [
+                            'default',
+                            {
+                                discardComments: { removeAll: true },
+                            },
+                        ]
+                    }
+                
+            }) : () => {}
             ]
         }
     }

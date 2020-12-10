@@ -1,2 +1,1 @@
-
-import html from './index.html';
+import _ from './index.html';
