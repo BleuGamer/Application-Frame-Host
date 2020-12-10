@@ -66,6 +66,13 @@ module.exports = (env, argv) => {
                         }
                     ]
                 },
+                {
+                    test: /\.html$/i,
+                    loader: 'file-loader',
+                    options: {
+                        name: '[name].[ext]',
+                    }
+                },
             ]
         }
     }
