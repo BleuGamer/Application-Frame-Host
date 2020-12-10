@@ -6,7 +6,12 @@ module.exports = (env, argv) => {
     const isProduction = argv.mode == 'production';
 
     return {
-        plugins: [new MiniCssExtractPlugin()],
+        plugins: [
+            new MiniCssExtractPlugin({
+                filename: "[name].css"
+            }),
+            
+        ],
         entry: {
             bundle: './ui/index.js',
             style: './ui/index.scss'
@@ -22,7 +27,7 @@ module.exports = (env, argv) => {
             },
             extensions: ['.js', '.json', '.jsx']
         },
-        devtool: (isProduction) ? "none" : "source-map",
+        devtool: (isProduction) ? false : "source-map",
         module: {
             rules: [
                 {
@@ -49,7 +54,6 @@ module.exports = (env, argv) => {
                         {
                             loader: "css-loader",
                             options: {
-                                // always make sourceMap. resolver-url-loader is needing it
                                 "sourceMap": !isProduction,
                             },
                         },
@@ -60,26 +64,7 @@ module.exports = (env, argv) => {
                                 sourceMap: true,
                             }
                         }
-                    ] 
-                    /*
-                    use: [
-                        MiniCssExtractPlugin.loader,
-                        {
-                            loader: "css-loader",
-                            options: {
-                                "sourceMap": !isProduction,
-                            }
-                        },
-                        "resolve-url-loader",
-                        {
-                            loader: "sass-loader",
-                            options: {
-                                // always make sourceMap. resolver-url-loader is needing it
-                                "sourceMap": true,
-                            }
-                        }
                     ]
-                    */
                 },
             ]
         }
