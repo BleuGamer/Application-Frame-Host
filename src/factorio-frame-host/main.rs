@@ -2,9 +2,8 @@
 #![allow(unused_imports)]
 #![allow(unused_variables)]
 
-#[macro_use]
-extern crate slog;
-use slog::Drain;
+
+use slog::{ Drain, info, o };
 use slog_term;
 use slog_async;
 use frame_host;
@@ -105,11 +104,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         select! {
             recv(ticks) -> _ =>
             {
-                info!(&logger, "Working!");
+                //info!(&logger, "Working!");
             }
             recv(ctrl_c_events) -> _ =>
             {
-                info!(&logger, "Stopping Factorio Server.");
+                info!(&logger, "Stopping Server.");
                 // fserver.stop();
                 break;
             }
