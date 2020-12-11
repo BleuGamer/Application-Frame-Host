@@ -97,7 +97,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // This is unsafe.
         // Temporary testing.
         // TODO: Proper Actix Async handling.
-        let waw = web_api::web_server::start(actix_logger);
+        let waw = web_api::web_server::start(actix_logger, "127.0.0.1", "8080");
         let was = web_api::web_server::start_web_socket();
     });
 

@@ -1,6 +1,6 @@
 use util;
 
-use slog::{Drain, Logger, o};
+use slog::{Drain, Logger, info, o};
 use crate::actix_slog::StructuredLogger;
 
 use actix::{Actor, StreamHandler};
@@ -11,7 +11,7 @@ use std::fs::OpenOptions;
 use std::sync::Mutex;
 
 #[actix_web::main]
-pub async fn start(_logger: Logger) -> std::io::Result<()> {
+pub async fn start(_logger: Logger, ip: &'static str, port: &'static str) -> std::io::Result<()> {
 
     let dir = util::env::get_cwd().unwrap();
     let file = OpenOptions::new()
@@ -27,6 +27,10 @@ pub async fn start(_logger: Logger) -> std::io::Result<()> {
     let _drain = Mutex::new(slog::Duplicate::new(_logger, drain)).fuse();
     let logger = slog::Logger::root(_drain, o!());
 
+    info!(&logger, "Starting webserver at: http://{0}:{1}", &ip, &port);
+
+    let resolve = format!("{0}:{1}", &ip, &port);
+
     let mut dir = util::env::get_cwd().unwrap();
     dir.push("app");
 
@@ -37,7 +41,7 @@ pub async fn start(_logger: Logger) -> std::io::Result<()> {
                 StructuredLogger::new(logger.new(o!("log_type" => "access"))),
             )
     })
-        .bind("127.0.0.1:8080")?
+        .bind(resolve)?
         .run()
         .await
 }
