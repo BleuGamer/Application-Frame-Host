@@ -1,11 +1,13 @@
 const path = require('path');
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
+const TerserPlugin = require('terser-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const webpack = require('webpack');
 
 module.exports = (env, argv) => {
     const isProduction = argv.mode == 'production';
+    console.log("PRODUCTION: ", isProduction);
 
     return {
         plugins: [
@@ -79,7 +81,10 @@ module.exports = (env, argv) => {
                 },
                 {
                     test: /(\.(png|jpe?g|gif|ico)$|^((?!font).)*\.svg$)/,
-                    type: 'asset/resource',
+                    loader: 'file-loader',
+                    options: {
+                        name: '[name].[ext]',
+                    }
                 },
                 {
                     test: /(\.(woff2?|ttf|eot|otf)$|font.*\.svg$)/,
@@ -102,7 +107,17 @@ module.exports = (env, argv) => {
                         ]
                     }
                 
-            }) : () => {}
+            }) : () => {},
+                (isProduction) ?
+                new TerserPlugin({
+                    parallel: true,
+                    terserOptions: {
+                        format: {
+                            comments: false,
+                        },
+                    },
+                    extractComments: false,
+                }) : () => {}
             ]
         }
     }
