@@ -2,8 +2,10 @@ const path = require('path');
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const CssMinimizerPlugin = require('css-minimizer-webpack-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const webpack = require('webpack');
+const { unstable_batchedUpdates } = require('react-dom');
 
 module.exports = (env, argv) => {
     const isProduction = argv.mode == 'production';
@@ -14,9 +16,16 @@ module.exports = (env, argv) => {
             new MiniCssExtractPlugin({
                 filename: "[name].css"
             }),
-            new HtmlWebpackPlugin({
-                template: './ui/index.html'
-            }),
+            new CopyWebpackPlugin({
+                patterns: [
+                    { from: './ui/resources' }
+                ]
+            })
+            //new HtmlWebpackPlugin({
+            //    template: './ui/index.html',
+            //    inject: 'head',
+            //    favicon: './ui/resources/favicon.ico'
+            //}),
         ],
         entry: {
             bundle: './ui/index.js',
@@ -74,6 +83,13 @@ module.exports = (env, argv) => {
                 },
                 {
                     test: /\.html$/i,
+                    loader: 'html-loader',
+                    options: {
+
+                    }
+                },
+                {
+                    test: /\.html$/i,
                     loader: 'file-loader',
                     options: {
                         name: '[name].[ext]',
@@ -119,6 +135,10 @@ module.exports = (env, argv) => {
                     extractComments: false,
                 }) : () => {}
             ]
+        },
+        devServer: {
+            contentBase: path.join(__dirname, 'resources', 'app'),
+            port: 8080,
         }
     }
 }

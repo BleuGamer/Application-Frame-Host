@@ -1,3 +1,5 @@
+import _ from './index.html';
+import React from 'react';
 import ReactDOM from 'react-dom';
 import App from './App/App.jsx';
 import {BrowserRouter, Switch, Route} from "react-router-dom";

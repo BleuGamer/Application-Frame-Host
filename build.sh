@@ -9,7 +9,7 @@ set -e
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 cd $DIR
 
-npm run build
+npm run dev
 
 if cargo "$@"; then
     [ -d "${DIR}/target/debug" ] && cp -R "${DIR}/resources/." "${DIR}/target/debug/"
