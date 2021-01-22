@@ -11,7 +11,7 @@ cd $DIR
 
 npm run dev
 
-if cargo "$@"; then
-    [ -d "${DIR}/target/debug" ] && cp -R "${DIR}/resources/." "${DIR}/target/debug/"
-    [ -d "${DIR}/target/release" ] && cp -R "${DIR}/resources/." "${DIR}/target/release/"
-fi
+cargo "$@"
+
+[ -d "${DIR}/target/debug" ] && cp -R "${DIR}/resources/." "${DIR}/target/debug/"
+[ -d "${DIR}/target/release" ] && cp -R "${DIR}/resources/." "${DIR}/target/release/"

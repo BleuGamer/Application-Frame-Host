@@ -39,7 +39,9 @@ pub fn write_json_file(file: &str, json: String) {
 
 fn read_cwd_file(file: &str) -> String {
     let mut pwd = crate::env::get_cwd().unwrap();
+    println!("{}", pwd.display());
     pwd.push(file);
+    println!("{}", pwd.display());
     let file = File::open(pwd.as_path()).expect("Could not open file.");
     let mut buffered_reader = BufReader::new(file);
     let mut contents = String::new();

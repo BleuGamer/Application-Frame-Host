@@ -53,6 +53,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!(logger, "STARTING SERVER");
 
     let server_details = &mut util::parser::ServerDetails::default();
+
+    #[cfg(target_os = "windows")]
+    util::parser::read_contents("win_factorio.json", server_details).unwrap();
+
+    #[cfg(target_os = "linux")]
     util::parser::read_contents("factorio.json", server_details).unwrap();
 
     let fppath = Path::new(server_details.root_url.as_ref().unwrap());
